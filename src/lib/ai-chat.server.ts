@@ -1,6 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateText, streamText } from "ai";
+import { generateText, streamText, type ModelMessage } from "ai";
 
 import { ATTACHMENT_BUCKET, type AssistantFailure, type ChatAttachment } from "./ai-chat.server.types";
 
@@ -109,7 +109,7 @@ export async function runAssistantReply(params: {
     const result = streamText({
       model: gateway(defaultModel()),
       system: SYSTEM_PROMPT,
-      messages: modelMessages as Parameters<typeof streamText>[0]["messages"],
+      messages: modelMessages as ModelMessage[],
     });
     text = (await result.text).trim();
   } catch (error) {
