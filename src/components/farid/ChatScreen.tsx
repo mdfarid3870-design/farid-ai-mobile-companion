@@ -403,7 +403,7 @@ export function ChatScreen() {
                 }}
               />
               <PromptInputSubmit
-                status={pending ? "submitted" : undefined}
+                {...(pending ? { status: "submitted" as const } : {})}
                 disabled={pending || draft.trim().length === 0}
               />
             </PromptInputFooter>

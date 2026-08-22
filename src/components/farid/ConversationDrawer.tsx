@@ -34,7 +34,7 @@ type Props = {
   onRename: (id: string, title: string) => void;
   onTogglePin: (conversation: Conversation) => void;
   onDelete: (id: string) => void;
-  accountEmail?: string;
+  accountEmail?: string | undefined;
   onSignOut: () => void;
 };
 
