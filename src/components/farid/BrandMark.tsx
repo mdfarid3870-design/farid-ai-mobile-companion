@@ -1,9 +1,7 @@
-import iconUrl from "/icons/icon-512.png?url";
-
 export function BrandMark({ className = "size-8" }: { className?: string }) {
   return (
     <img
-      src={iconUrl}
+      src="/icons/icon-512.png"
       alt="FARID AI logo"
       width={512}
       height={512}
