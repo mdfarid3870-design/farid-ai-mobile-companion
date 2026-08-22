@@ -76,22 +76,40 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      {
+        name: "viewport",
+        // interactive-widget keeps the composer visible when the Android keyboard opens.
+        content:
+          "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+      },
+      { title: "FARID AI — AI Chat Assistant" },
+      {
+        name: "description",
+        content:
+          "FARID AI is a fast, installable AI chat assistant with saved conversations, dark mode and offline-aware UI.",
+      },
+      { name: "author", content: "FARID AI" },
+      { name: "theme-color", content: "#0B0F14" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "FARID AI" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { property: "og:title", content: "FARID AI — AI Chat Assistant" },
+      {
+        property: "og:description",
+        content: "Chat with FARID AI: streaming answers, saved history, installable on Android.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", href: "/icons/icon-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -102,7 +120,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -117,10 +135,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    void registerServiceWorker();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <ThemeProvider>
+        <AuthProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <Toaster position="top-center" />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
