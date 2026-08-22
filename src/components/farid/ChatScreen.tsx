@@ -258,12 +258,13 @@ export function ChatScreen() {
       <ConversationView className="min-h-0 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-3 pb-4">
           {list.length === 0 && !pending ? (
-            <ConversationEmptyState
-              icon={<BrandMark className="size-12" />}
-              title="How can I help you today?"
-              description="Ask anything — FARID AI is ready."
-            >
-              <div className="mt-4 grid w-full gap-2">
+            <ConversationEmptyState>
+              <BrandMark className="size-14 shadow-glow" />
+              <h2 className="mt-3 font-display text-xl font-semibold">
+                How can I help you today?
+              </h2>
+              <p className="text-sm text-muted-foreground">Ask anything — FARID AI is ready.</p>
+              <div className="mt-4 grid w-full max-w-md gap-2">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
