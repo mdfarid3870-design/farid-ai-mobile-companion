@@ -2,7 +2,7 @@ import type { Database } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateText, streamText } from "ai";
 
-import type { AssistantFailure } from "./ai-chat.server.types";
+import { ATTACHMENT_BUCKET, type AssistantFailure, type ChatAttachment } from "./ai-chat.server.types";
 
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
@@ -36,7 +36,7 @@ function classify(error: unknown): AssistantFailure {
 async function loadHistory(supabase: Client, conversationId: string, untilMessageId?: string) {
   const { data, error } = await supabase
     .from("messages")
-    .select("id, role, content, created_at")
+    .select("id, role, content, created_at, attachments")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
@@ -45,6 +45,39 @@ async function loadHistory(supabase: Client, conversationId: string, untilMessag
   if (!untilMessageId) return rows;
   const index = rows.findIndex((row) => row.id === untilMessageId);
   return index === -1 ? rows : rows.slice(0, index + 1);
+}
+
+type UserPart =
+  | { type: "text"; text: string }
+  | { type: "file"; data: Uint8Array; mediaType: string; filename: string };
+
+/** Downloads each attachment and turns it into a model-readable file part. */
+async function buildUserContent(
+  supabase: Client,
+  text: string,
+  attachments: ChatAttachment[] | null,
+): Promise<string | UserPart[]> {
+  const files = Array.isArray(attachments) ? attachments : [];
+  if (files.length === 0) return text;
+
+  const parts: UserPart[] = [];
+  for (const file of files) {
+    try {
+      const { data, error } = await supabase.storage.from(ATTACHMENT_BUCKET).download(file.path);
+      if (error || !data) throw error ?? new Error("download failed");
+      parts.push({
+        type: "file",
+        data: new Uint8Array(await data.arrayBuffer()),
+        mediaType: file.mimeType,
+        filename: file.name,
+      });
+    } catch (error) {
+      console.error("[farid-ai] attachment unavailable", file.path, error);
+      parts.push({ type: "text", text: `(The file "${file.name}" could not be read.)` });
+    }
+  }
+  parts.push({ type: "text", text: text || "Please analyse the attached file(s)." });
+  return parts;
 }
 
 export async function runAssistantReply(params: {
@@ -63,14 +96,20 @@ export async function runAssistantReply(params: {
     if (history.length === 0) return { ok: false, kind: "bad_request" };
 
     const gateway = createLovableAiGatewayProvider(apiKey);
+    const modelMessages = await Promise.all(
+      history.map(async (row) => ({
+        role: row.role === "assistant" ? ("assistant" as const) : ("user" as const),
+        content:
+          row.role === "assistant"
+            ? row.content
+            : await buildUserContent(supabase, row.content, row.attachments as ChatAttachment[] | null),
+      })),
+    );
     // Streamed inside the handler so long answers never stall the connection.
     const result = streamText({
       model: gateway(defaultModel()),
       system: SYSTEM_PROMPT,
-      messages: history.map((row) => ({
-        role: row.role === "assistant" ? ("assistant" as const) : ("user" as const),
-        content: row.content,
-      })),
+      messages: modelMessages as Parameters<typeof streamText>[0]["messages"],
     });
     text = (await result.text).trim();
   } catch (error) {
