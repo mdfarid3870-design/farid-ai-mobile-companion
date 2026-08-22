@@ -23,7 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnline } from "@/hooks/useOnline";
 import { useTheme } from "@/hooks/useTheme";
-import type { ChatMessage } from "@/lib/ai-chat.server.types";
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENTS,
+  MAX_ATTACHMENT_BYTES,
+  ACCEPTED_ATTACHMENT_TYPES,
+  type ChatAttachment,
+  type ChatMessage,
+} from "@/lib/ai-chat.server.types";
 import { generateReply, generateTitle } from "@/lib/chat.functions";
 import {
   createConversation,
@@ -37,16 +44,32 @@ import {
   renameConversation,
   setPinned,
   updateMessage,
+  uploadAttachment,
 } from "@/lib/chat-store";
 import { FRIENDLY_ERRORS, OFFLINE_MESSAGE } from "@/lib/friendly-errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Copy, Menu, Moon, Paperclip, Pencil, Plus, RefreshCw, Sun, WifiOff } from "lucide-react";
+import {
+  Check,
+  Copy,
+  FileText,
+  Image as ImageIcon,
+  Menu,
+  Moon,
+  Paperclip,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Sun,
+  WifiOff,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
+import { MessageAttachments } from "./MessageAttachments";
 
 const SUGGESTIONS = [
   "Explain quantum computing simply",
@@ -79,6 +102,8 @@ export function ChatScreen() {
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const conversations = useQuery({
@@ -134,10 +159,38 @@ export function ChatScreen() {
     [refresh, reply, titleFn],
   );
 
+  const addFiles = useCallback(
+    (picked: FileList | null) => {
+      if (!picked?.length) return;
+      const next: File[] = [];
+      for (const file of Array.from(picked)) {
+        const type = file.type || "application/octet-stream";
+        if (!ACCEPTED_ATTACHMENT_TYPES.includes(type)) {
+          toast.error(`${file.name} isn't supported. Use images, PDF or TXT.`);
+          continue;
+        }
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          toast.error(`${file.name} is larger than 10 MB.`);
+          continue;
+        }
+        next.push(file);
+      }
+      setFiles((current) => {
+        const merged = [...current, ...next];
+        if (merged.length > MAX_ATTACHMENTS) {
+          toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per message.`);
+        }
+        return merged.slice(0, MAX_ATTACHMENTS);
+      });
+    },
+    [],
+  );
+
   const send = useCallback(
     async (text: string) => {
       const content = text.trim();
-      if (!content || pending || !user) return;
+      const attached = files;
+      if ((!content && attached.length === 0) || pending || uploading || !user) return;
       if (!online) {
         toast.error(OFFLINE_MESSAGE);
         return;
@@ -152,19 +205,40 @@ export function ChatScreen() {
           isFirstExchange = true;
           setActiveId(created.id);
         }
+
+        let attachments: ChatAttachment[] = [];
+        if (attached.length) {
+          setUploading(true);
+          try {
+            attachments = await Promise.all(
+              attached.map((file) =>
+                uploadAttachment({ file, userId: user.id, conversationId: conversationId as string }),
+              ),
+            );
+          } finally {
+            setUploading(false);
+          }
+        }
+
         const inserted = await insertUserMessage({
           conversationId,
           userId: user.id,
-          content,
+          content: content || `Sent ${attachments.length} file(s)`,
+          attachments,
         });
         setDraft("");
+        setFiles([]);
         refresh(conversationId);
         await runReply(conversationId, inserted.id, isFirstExchange);
-      } catch {
-        toast.error("Message could not be sent. Please try again.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error && error.message
+            ? error.message
+            : "Message could not be sent. Please try again.",
+        );
       }
     },
-    [activeId, messages.data?.length, online, pending, refresh, runReply, user],
+    [activeId, files, messages.data?.length, online, pending, refresh, runReply, uploading, user],
   );
 
   const regenerate = useCallback(
@@ -243,6 +317,7 @@ export function ChatScreen() {
           onClick={() => {
             setActiveId(null);
             setDraft("");
+            setFiles([]);
           }}
         >
           <Plus className="size-5" />
@@ -300,6 +375,7 @@ export function ChatScreen() {
             ) : (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
+                  <MessageAttachments attachments={message.attachments ?? []} />
                   {message.role === "assistant" ? (
                     <MessageResponse>{message.content}</MessageResponse>
                   ) : (
@@ -381,32 +457,59 @@ export function ChatScreen() {
               placeholder="Message FARID AI…"
               className="text-base"
             />
-            <PromptInputFooter className="justify-between">
-              {/* File analysis is not implemented yet; the picker is honest about it. */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Attach a file"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip className="size-4" />
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(event) => {
-                  if (event.target.files?.length) {
-                    toast("File attachments are coming soon — FARID AI can't read files yet.");
-                  }
-                  event.target.value = "";
-                }}
-              />
-              <PromptInputSubmit
-                {...(pending ? { status: "submitted" as const } : {})}
-                disabled={pending || draft.trim().length === 0}
-              />
+            <PromptInputFooter className="flex-col items-stretch gap-2">
+              {files.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {files.map((file, index) => (
+                    <span
+                      key={`${file.name}-${index}`}
+                      className="flex max-w-[70%] items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-xs"
+                    >
+                      {file.type.startsWith("image/") ? (
+                        <ImageIcon className="size-3.5 shrink-0 text-primary" />
+                      ) : (
+                        <FileText className="size-3.5 shrink-0 text-primary" />
+                      )}
+                      <span className="truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${file.name}`}
+                        onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
+                        className="text-muted-foreground"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Attach images or documents"
+                  disabled={pending || uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="size-4" />
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ATTACHMENT_ACCEPT}
+                  className="hidden"
+                  onChange={(event) => {
+                    addFiles(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+                <PromptInputSubmit
+                  {...(pending || uploading ? { status: "submitted" as const } : {})}
+                  disabled={pending || uploading || (draft.trim().length === 0 && files.length === 0)}
+                />
+              </div>
             </PromptInputFooter>
           </PromptInput>
         </div>
