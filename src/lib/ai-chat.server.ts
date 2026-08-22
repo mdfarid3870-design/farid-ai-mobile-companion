@@ -2,17 +2,11 @@ import type { Database } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateText, streamText } from "ai";
 
+import type { AssistantFailure } from "./ai-chat.server.types";
+
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 type Client = SupabaseClient<Database>;
-
-export type AssistantFailure =
-  | "offline"
-  | "config"
-  | "quota"
-  | "blocked"
-  | "bad_request"
-  | "server";
 
 export type AssistantResult =
   | { ok: true; message: { id: string; role: "assistant"; content: string; created_at: string } }
