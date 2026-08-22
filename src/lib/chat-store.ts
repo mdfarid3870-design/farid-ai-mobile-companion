@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { ChatMessage, Conversation } from "@/lib/ai-chat.server.types";
+import {
+  ATTACHMENT_BUCKET,
+  MAX_ATTACHMENT_BYTES,
+  ACCEPTED_ATTACHMENT_TYPES,
+  type ChatAttachment,
+  type ChatMessage,
+  type Conversation,
+} from "@/lib/ai-chat.server.types";
 
 const LAST_CONVERSATION_KEY = "farid-ai-last-conversation";
 
@@ -34,7 +41,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 export async function fetchMessages(conversationId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from("messages")
-    .select("id, conversation_id, role, content, created_at")
+    .select("id, conversation_id, role, content, created_at, attachments")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -55,6 +62,7 @@ export async function insertUserMessage(params: {
   conversationId: string;
   userId: string;
   content: string;
+  attachments?: ChatAttachment[];
 }): Promise<ChatMessage> {
   const { data, error } = await supabase
     .from("messages")
@@ -63,8 +71,9 @@ export async function insertUserMessage(params: {
       user_id: params.userId,
       role: "user",
       content: params.content,
+      attachments: params.attachments ?? [],
     })
-    .select("id, conversation_id, role, content, created_at")
+    .select("id, conversation_id, role, content, created_at, attachments")
     .single();
   if (error || !data) throw error ?? new Error("Could not send message");
   return data as ChatMessage;
@@ -103,4 +112,38 @@ export async function deleteMessagesAfter(conversationId: string, createdAt: str
 export async function deleteMessage(id: string) {
   const { error } = await supabase.from("messages").delete().eq("id", id);
   if (error) throw error;
+}
+
+/** Uploads one attachment into the caller's private folder and returns its metadata. */
+export async function uploadAttachment(params: {
+  file: File;
+  userId: string;
+  conversationId: string;
+}): Promise<ChatAttachment> {
+  const { file, userId, conversationId } = params;
+  const mimeType = file.type || "application/octet-stream";
+  if (!ACCEPTED_ATTACHMENT_TYPES.includes(mimeType)) {
+    throw new Error(`${file.name} isn't a supported file type.`);
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error(`${file.name} is larger than 10 MB.`);
+  }
+
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
+  const path = `${userId}/${conversationId}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .upload(path, file, { contentType: mimeType, upsert: false });
+  if (error) throw new Error(`${file.name} could not be uploaded.`);
+
+  return { path, name: file.name, mimeType, size: file.size };
+}
+
+/** Short-lived signed URL so attachments can be previewed or opened. */
+export async function signAttachment(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .createSignedUrl(path, 60 * 60);
+  if (error || !data) throw error ?? new Error("Could not open the file");
+  return data.signedUrl;
 }
