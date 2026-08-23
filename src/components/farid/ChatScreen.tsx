@@ -27,7 +27,7 @@ import {
   ATTACHMENT_ACCEPT,
   MAX_ATTACHMENTS,
   MAX_ATTACHMENT_BYTES,
-  ACCEPTED_ATTACHMENT_TYPES,
+  isAcceptedAttachmentType,
   type ChatAttachment,
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
