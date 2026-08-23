@@ -204,6 +204,7 @@ export function ChatScreen() {
           const created = await createConversation(user.id);
           conversationId = created.id;
           isFirstExchange = true;
+          setStartedNewChat(false);
           setActiveId(created.id);
         }
 
