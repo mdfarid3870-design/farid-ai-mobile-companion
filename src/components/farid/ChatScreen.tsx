@@ -529,8 +529,10 @@ export function ChatScreen() {
           setDrawerOpen(false);
         }}
         onNewChat={() => {
+          setStartedNewChat(true);
           setActiveId(null);
           setDraft("");
+          setFiles([]);
           setDrawerOpen(false);
         }}
         onRename={async (id, title) => {
