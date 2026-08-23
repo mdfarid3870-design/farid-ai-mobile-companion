@@ -172,9 +172,10 @@ export function ChatScreen() {
       if (!picked?.length) return;
       const next: File[] = [];
       for (const file of Array.from(picked)) {
-        const type = file.type || "application/octet-stream";
-        if (!ACCEPTED_ATTACHMENT_TYPES.includes(type)) {
-          toast.error(`${file.name} isn't supported. Use images, PDF or TXT.`);
+        if (!isAcceptedAttachmentType(file)) {
+          toast.error(
+            `${file.name} isn't supported. Use photos, videos, PDFs, ZIPs, DOC/DOCX, or TXT.`,
+          );
           continue;
         }
         if (file.size > MAX_ATTACHMENT_BYTES) {
