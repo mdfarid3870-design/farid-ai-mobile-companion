@@ -97,6 +97,7 @@ export function ChatScreen() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<ChatMessage | null>(null);
@@ -119,12 +120,12 @@ export function ChatScreen() {
 
   // Restore the chat the user had open last time the app was launched.
   useEffect(() => {
-    if (activeId || !conversations.data) return;
+    if (activeId || startedNewChat || !conversations.data) return;
     const remembered = recallConversation();
     const match = conversations.data.find((item) => item.id === remembered);
     const next = match?.id ?? conversations.data[0]?.id ?? null;
     if (next) setActiveId(next);
-  }, [activeId, conversations.data]);
+  }, [activeId, startedNewChat, conversations.data]);
 
   useEffect(() => {
     rememberConversation(activeId);
@@ -203,6 +204,7 @@ export function ChatScreen() {
           const created = await createConversation(user.id);
           conversationId = created.id;
           isFirstExchange = true;
+          setStartedNewChat(false);
           setActiveId(created.id);
         }
 
@@ -284,8 +286,7 @@ export function ChatScreen() {
   });
 
   const list = messages.data ?? [];
-  const activeTitle =
-    conversations.data?.find((item) => item.id === activeId)?.title ?? "FARID AI";
+  const activeTitle = "FaridAI";
 
   return (
     <div className="app-shell flex flex-col bg-background">
@@ -315,9 +316,12 @@ export function ChatScreen() {
           size="icon-lg"
           aria-label="New chat"
           onClick={() => {
+            setStartedNewChat(true);
             setActiveId(null);
             setDraft("");
             setFiles([]);
+            setEditing(null);
+            setEditValue("");
           }}
         >
           <Plus className="size-5" />
@@ -521,12 +525,15 @@ export function ChatScreen() {
         conversations={conversations.data ?? []}
         activeId={activeId}
         onSelect={(id) => {
+          setStartedNewChat(false);
           setActiveId(id);
           setDrawerOpen(false);
         }}
         onNewChat={() => {
+          setStartedNewChat(true);
           setActiveId(null);
           setDraft("");
+          setFiles([]);
           setDrawerOpen(false);
         }}
         onRename={async (id, title) => {
