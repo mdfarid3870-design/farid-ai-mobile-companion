@@ -285,8 +285,7 @@ export function ChatScreen() {
   });
 
   const list = messages.data ?? [];
-  const activeTitle =
-    conversations.data?.find((item) => item.id === activeId)?.title ?? "FARID AI";
+  const activeTitle = "FaridAI";
 
   return (
     <div className="app-shell flex flex-col bg-background">
