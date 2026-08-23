@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ATTACHMENT_BUCKET,
   MAX_ATTACHMENT_BYTES,
-  ACCEPTED_ATTACHMENT_TYPES,
+  isAcceptedAttachmentType,
   type ChatAttachment,
   type ChatMessage,
   type Conversation,
