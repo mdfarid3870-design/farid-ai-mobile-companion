@@ -496,16 +496,65 @@ export function ChatScreen() {
                 </div>
               ) : null}
               <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Attach images or documents"
-                  disabled={pending || uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip className="size-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Attach files"
+                      disabled={pending || uploading}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="start">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "image/*";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <ImageIcon className="mr-2 size-4" />
+                      Photo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "video/*";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <Video className="mr-2 size-4" />
+                      Video
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <FileText className="mr-2 size-4" />
+                      Document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = ".zip";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <FileArchive className="mr-2 size-4" />
+                      ZIP
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <input
                   ref={fileInputRef}
                   type="file"
