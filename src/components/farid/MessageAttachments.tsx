@@ -1,7 +1,7 @@
 import type { ChatAttachment } from "@/lib/ai-chat.server.types";
 import { signAttachment } from "@/lib/chat-store";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Image as ImageIcon } from "lucide-react";
+import { FileText, Image as ImageIcon, Video } from "lucide-react";
 import { toast } from "sonner";
 
 function formatSize(bytes: number) {
