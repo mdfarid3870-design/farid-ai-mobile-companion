@@ -52,15 +52,16 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check,
   Copy,
+  FileArchive,
   FileText,
   Image as ImageIcon,
   Menu,
   Moon,
-  Paperclip,
   Pencil,
   Plus,
   RefreshCw,
   Sun,
+  Video,
   WifiOff,
   X,
 } from "lucide-react";
@@ -70,6 +71,12 @@ import { toast } from "sonner";
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SUGGESTIONS = [
   "Explain quantum computing simply",
