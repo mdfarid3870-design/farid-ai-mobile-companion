@@ -315,9 +315,12 @@ export function ChatScreen() {
           size="icon-lg"
           aria-label="New chat"
           onClick={() => {
+            setStartedNewChat(true);
             setActiveId(null);
             setDraft("");
             setFiles([]);
+            setEditing(null);
+            setEditValue("");
           }}
         >
           <Plus className="size-5" />
