@@ -12,6 +12,7 @@ function formatSize(bytes: number) {
 
 function AttachmentCard({ attachment }: { attachment: ChatAttachment }) {
   const isImage = attachment.mimeType.startsWith("image/");
+  const isVideo = attachment.mimeType.startsWith("video/");
   const signed = useQuery({
     queryKey: ["attachment", attachment.path],
     queryFn: () => signAttachment(attachment.path),
@@ -48,6 +49,28 @@ function AttachmentCard({ attachment }: { attachment: ChatAttachment }) {
           </div>
         )}
       </button>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div
+        className="overflow-hidden rounded-xl border border-border bg-muted"
+        aria-label={`Video ${attachment.name}`}
+      >
+        {signed.data ? (
+          <video
+            src={signed.data}
+            controls
+            preload="metadata"
+            className="max-h-56 w-full"
+          />
+        ) : (
+          <div className="flex h-32 w-40 items-center justify-center text-muted-foreground">
+            <Video className="size-6" />
+          </div>
+        )}
+      </div>
     );
   }
 
