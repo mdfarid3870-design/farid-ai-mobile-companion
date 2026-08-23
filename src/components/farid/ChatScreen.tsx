@@ -97,6 +97,7 @@ export function ChatScreen() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<ChatMessage | null>(null);
