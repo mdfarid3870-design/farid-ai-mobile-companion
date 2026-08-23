@@ -120,12 +120,12 @@ export function ChatScreen() {
 
   // Restore the chat the user had open last time the app was launched.
   useEffect(() => {
-    if (activeId || !conversations.data) return;
+    if (activeId || startedNewChat || !conversations.data) return;
     const remembered = recallConversation();
     const match = conversations.data.find((item) => item.id === remembered);
     const next = match?.id ?? conversations.data[0]?.id ?? null;
     if (next) setActiveId(next);
-  }, [activeId, conversations.data]);
+  }, [activeId, startedNewChat, conversations.data]);
 
   useEffect(() => {
     rememberConversation(activeId);
