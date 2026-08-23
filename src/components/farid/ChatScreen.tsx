@@ -525,6 +525,7 @@ export function ChatScreen() {
         conversations={conversations.data ?? []}
         activeId={activeId}
         onSelect={(id) => {
+          setStartedNewChat(false);
           setActiveId(id);
           setDrawerOpen(false);
         }}
