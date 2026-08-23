@@ -131,6 +131,7 @@ export async function uploadAttachment(params: {
   }
 
   const mimeType = file.type || "application/octet-stream";
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
   const path = `${userId}/${conversationId}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await supabase.storage
     .from(ATTACHMENT_BUCKET)
