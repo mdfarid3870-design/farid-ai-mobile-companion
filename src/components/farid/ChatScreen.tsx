@@ -27,7 +27,7 @@ import {
   ATTACHMENT_ACCEPT,
   MAX_ATTACHMENTS,
   MAX_ATTACHMENT_BYTES,
-  ACCEPTED_ATTACHMENT_TYPES,
+  isAcceptedAttachmentType,
   type ChatAttachment,
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
@@ -52,15 +52,16 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Check,
   Copy,
+  FileArchive,
   FileText,
   Image as ImageIcon,
   Menu,
   Moon,
-  Paperclip,
   Pencil,
   Plus,
   RefreshCw,
   Sun,
+  Video,
   WifiOff,
   X,
 } from "lucide-react";
@@ -70,6 +71,12 @@ import { toast } from "sonner";
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SUGGESTIONS = [
   "Explain quantum computing simply",
@@ -165,9 +172,10 @@ export function ChatScreen() {
       if (!picked?.length) return;
       const next: File[] = [];
       for (const file of Array.from(picked)) {
-        const type = file.type || "application/octet-stream";
-        if (!ACCEPTED_ATTACHMENT_TYPES.includes(type)) {
-          toast.error(`${file.name} isn't supported. Use images, PDF or TXT.`);
+        if (!isAcceptedAttachmentType(file)) {
+          toast.error(
+            `${file.name} isn't supported. Use photos, videos, PDFs, ZIPs, DOC/DOCX, or TXT.`,
+          );
           continue;
         }
         if (file.size > MAX_ATTACHMENT_BYTES) {
@@ -471,6 +479,8 @@ export function ChatScreen() {
                     >
                       {file.type.startsWith("image/") ? (
                         <ImageIcon className="size-3.5 shrink-0 text-primary" />
+                      ) : file.type.startsWith("video/") ? (
+                        <Video className="size-3.5 shrink-0 text-primary" />
                       ) : (
                         <FileText className="size-3.5 shrink-0 text-primary" />
                       )}
@@ -488,16 +498,65 @@ export function ChatScreen() {
                 </div>
               ) : null}
               <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Attach images or documents"
-                  disabled={pending || uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip className="size-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Attach files"
+                      disabled={pending || uploading}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="start">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "image/*";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <ImageIcon className="mr-2 size-4" />
+                      Photo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "video/*";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <Video className="mr-2 size-4" />
+                      Video
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <FileText className="mr-2 size-4" />
+                      Document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = ".zip";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                    >
+                      <FileArchive className="mr-2 size-4" />
+                      ZIP
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <input
                   ref={fileInputRef}
                   type="file"

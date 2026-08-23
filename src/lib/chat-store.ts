@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ATTACHMENT_BUCKET,
   MAX_ATTACHMENT_BYTES,
-  ACCEPTED_ATTACHMENT_TYPES,
+  isAcceptedAttachmentType,
   type ChatAttachment,
   type ChatMessage,
   type Conversation,
@@ -121,14 +121,16 @@ export async function uploadAttachment(params: {
   conversationId: string;
 }): Promise<ChatAttachment> {
   const { file, userId, conversationId } = params;
-  const mimeType = file.type || "application/octet-stream";
-  if (!ACCEPTED_ATTACHMENT_TYPES.includes(mimeType)) {
-    throw new Error(`${file.name} isn't a supported file type.`);
+  if (!isAcceptedAttachmentType(file)) {
+    throw new Error(
+      `${file.name} isn't a supported file type. Use photos, videos, PDFs, ZIPs, DOC/DOCX, or TXT.`,
+    );
   }
   if (file.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`${file.name} is larger than 10 MB.`);
   }
 
+  const mimeType = file.type || "application/octet-stream";
   const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
   const path = `${userId}/${conversationId}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await supabase.storage
