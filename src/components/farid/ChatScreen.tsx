@@ -479,6 +479,8 @@ export function ChatScreen() {
                     >
                       {file.type.startsWith("image/") ? (
                         <ImageIcon className="size-3.5 shrink-0 text-primary" />
+                      ) : file.type.startsWith("video/") ? (
+                        <Video className="size-3.5 shrink-0 text-primary" />
                       ) : (
                         <FileText className="size-3.5 shrink-0 text-primary" />
                       )}
