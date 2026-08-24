@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -52,7 +51,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (error) throw error;
         if (!data.session) {
@@ -63,6 +62,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+      navigate({ to: "/", replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sign in failed. Please try again.");
     } finally {
@@ -70,18 +70,34 @@ function AuthPage() {
     }
   };
 
-  const google = async () => {
-    setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+  const signInWithGoogle = async () => {
+    try {
+      setBusy(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(`Google sign-in failed: ${error.message}`);
+        return;
+      }
+
+      // OAuth redirects automatically
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
       toast.error("Google sign-in failed. Please try again.");
+    } finally {
       setBusy(false);
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/", replace: true });
   };
 
   return (
@@ -117,7 +133,7 @@ function AuthPage() {
             variant="outline"
             className="tap-target h-12 w-full gap-2"
             disabled={busy}
-            onClick={google}
+            onClick={signInWithGoogle}
           >
             <GoogleGlyph /> Continue with Google
           </Button>
