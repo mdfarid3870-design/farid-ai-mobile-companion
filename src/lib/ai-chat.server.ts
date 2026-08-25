@@ -96,6 +96,13 @@ export async function runAssistantReply(params: {
     if (history.length === 0) return { ok: false, kind: "bad_request" };
 
     const gateway = createLovableAiGatewayProvider(apiKey);
+    const { ownerPromptBlock } = await import("./owner.server");
+    const { data: ownerRow } = await supabase
+      .from("owner_verifications")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const systemPrompt = `${SYSTEM_PROMPT} ${ownerPromptBlock(Boolean(ownerRow))}`;
     const modelMessages = await Promise.all(
       history.map(async (row) => ({
         role: row.role === "assistant" ? ("assistant" as const) : ("user" as const),
