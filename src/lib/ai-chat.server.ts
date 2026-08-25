@@ -115,7 +115,7 @@ export async function runAssistantReply(params: {
     // Streamed inside the handler so long answers never stall the connection.
     const result = streamText({
       model: gateway(defaultModel()),
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: modelMessages as ModelMessage[],
     });
     text = (await result.text).trim();
