@@ -79,6 +79,21 @@ export type Database = {
           },
         ]
       }
+      owner_verifications: {
+        Row: {
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
