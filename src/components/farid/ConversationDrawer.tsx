@@ -242,6 +242,61 @@ export function ConversationDrawer({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={ownerOpen} onOpenChange={setOwnerOpen}>
+        <DialogContent className="max-w-[92vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Owner verification</DialogTitle>
+          </DialogHeader>
+          {ownerVerified ? (
+            <p className="text-sm text-muted-foreground">
+              This account is verified as the creator of FaridAI.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Enter the owner verification code to confirm you are the creator.
+              </p>
+              <Input
+                type="password"
+                autoComplete="off"
+                value={ownerCode}
+                onChange={(event) => {
+                  setOwnerCode(event.target.value);
+                  setOwnerError(null);
+                }}
+                className="h-11"
+                aria-label="Owner verification code"
+              />
+              {ownerError ? <p className="text-sm text-destructive">{ownerError}</p> : null}
+            </>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" className="tap-target" onClick={() => setOwnerOpen(false)}>
+              Close
+            </Button>
+            {ownerVerified ? null : (
+              <Button
+                className="tap-target"
+                disabled={ownerCode.trim().length === 0 || verifying}
+                onClick={async () => {
+                  setVerifying(true);
+                  const ok = await onVerifyOwner(ownerCode);
+                  setVerifying(false);
+                  if (ok) {
+                    setOwnerCode("");
+                    setOwnerOpen(false);
+                  } else {
+                    setOwnerError("Verification failed.");
+                  }
+                }}
+              >
+                {verifying ? "Verifying…" : "Verify"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
