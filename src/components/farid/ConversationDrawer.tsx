@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Conversation } from "@/lib/ai-chat.server.types";
-import { Pencil, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Pin, PinOff, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BrandMark } from "./BrandMark";
@@ -36,6 +36,8 @@ type Props = {
   onDelete: (id: string) => void;
   accountEmail?: string | undefined;
   onSignOut: () => void;
+  ownerVerified: boolean;
+  onVerifyOwner: (code: string) => Promise<boolean>;
 };
 
 export function ConversationDrawer({
@@ -50,11 +52,17 @@ export function ConversationDrawer({
   onDelete,
   accountEmail,
   onSignOut,
+  ownerVerified,
+  onVerifyOwner,
 }: Props) {
   const [query, setQuery] = useState("");
   const [renaming, setRenaming] = useState<Conversation | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleting, setDeleting] = useState<Conversation | null>(null);
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [ownerCode, setOwnerCode] = useState("");
+  const [ownerError, setOwnerError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // Android hardware back closes the drawer instead of leaving the app.
   useEffect(() => {
