@@ -32,6 +32,7 @@ import {
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
 import { generateReply, generateTitle } from "@/lib/chat.functions";
+import { getOwnerStatus, verifyOwnerCode } from "@/lib/owner.functions";
 import {
   createConversation,
   deleteConversation,
@@ -123,6 +124,12 @@ export function ChatScreen() {
     queryKey: ["messages", activeId],
     queryFn: () => fetchMessages(activeId as string),
     enabled: Boolean(activeId),
+  });
+
+  const ownerStatus = useQuery({
+    queryKey: ["owner-status", user?.id],
+    queryFn: () => ownerStatusFn({}),
+    enabled: Boolean(user?.id),
   });
 
   // Restore the chat the user had open last time the app was launched.
@@ -614,6 +621,20 @@ export function ChatScreen() {
         onDelete={(id) => removeConversation.mutate(id)}
         accountEmail={user?.email ?? undefined}
         onSignOut={signOut}
+        ownerVerified={ownerStatus.data?.ownerVerified ?? false}
+        onVerifyOwner={async (code) => {
+          try {
+            const result = await verifyOwner({ data: { code } });
+            if (result.ok) {
+              await ownerStatus.refetch();
+              toast.success("Owner verified.");
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
+          }
+        }}
       />
     </div>
   );
