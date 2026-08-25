@@ -160,6 +160,22 @@ export function ConversationDrawer({
 
           <div className="border-t border-sidebar-border px-4 py-3">
             <p className="truncate text-xs text-muted-foreground">{accountEmail}</p>
+            <Button
+              variant="ghost"
+              className="tap-target mt-1 h-9 w-full justify-start gap-2 px-0"
+              onClick={() => {
+                setOwnerCode("");
+                setOwnerError(null);
+                setOwnerOpen(true);
+              }}
+            >
+              <ShieldCheck
+                className={`size-4 ${ownerVerified ? "text-primary" : "text-muted-foreground"}`}
+              />
+              <span className="text-sm">
+                {ownerVerified ? "Verified creator" : "Owner verification"}
+              </span>
+            </Button>
             <Button variant="ghost" className="tap-target mt-1 h-9 px-0" onClick={onSignOut}>
               Sign out
             </Button>
