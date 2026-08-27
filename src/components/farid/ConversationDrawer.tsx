@@ -19,7 +19,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Conversation } from "@/lib/ai-chat.server.types";
-import { Pencil, Pin, PinOff, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  LogOut,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BrandMark } from "./BrandMark";
