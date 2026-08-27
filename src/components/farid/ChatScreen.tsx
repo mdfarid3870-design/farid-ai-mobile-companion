@@ -66,6 +66,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -100,6 +101,7 @@ export function ChatScreen() {
   const { theme, toggleTheme } = useTheme();
   const online = useOnline();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const reply = useServerFn(generateReply);
   const titleFn = useServerFn(generateTitle);
   const ownerStatusFn = useServerFn(getOwnerStatus);
@@ -116,6 +118,32 @@ export function ChatScreen() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSignOut = useCallback(async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await signOut();
+    navigate({ to: "/auth", replace: true });
+  }, [navigate, queryClient, signOut]);
+
+  const handleSwitchAccount = useCallback(async () => {
+    try {
+      const { lovable } = await import("@/integrations/lovable/index");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
+      });
+      if (result.error) {
+        toast.error("Google sign-in failed. Please try again.");
+        return;
+      }
+      if (result.redirected) return;
+      await queryClient.invalidateQueries();
+      setDrawerOpen(false);
+    } catch {
+      toast.error("Google sign-in failed. Please try again.");
+    }
+  }, [queryClient]);
 
   const conversations = useQuery({
     queryKey: ["conversations"],
@@ -622,7 +650,8 @@ export function ChatScreen() {
         }}
         onDelete={(id) => removeConversation.mutate(id)}
         accountEmail={user?.email ?? undefined}
-        onSignOut={signOut}
+        onSignOut={handleSignOut}
+        onSwitchAccount={handleSwitchAccount}
         ownerVerified={ownerStatus.data?.ownerVerified ?? false}
         onVerifyOwner={async (code) => {
           try {

@@ -46,6 +46,7 @@ type Props = {
   onDelete: (id: string) => void;
   accountEmail?: string | undefined;
   onSignOut: () => void;
+  onSwitchAccount: () => void;
   ownerVerified: boolean;
   onVerifyOwner: (code: string) => Promise<boolean>;
 };
@@ -62,6 +63,7 @@ export function ConversationDrawer({
   onDelete,
   accountEmail,
   onSignOut,
+  onSwitchAccount,
   ownerVerified,
   onVerifyOwner,
 }: Props) {
