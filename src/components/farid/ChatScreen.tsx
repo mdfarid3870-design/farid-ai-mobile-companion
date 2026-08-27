@@ -102,6 +102,8 @@ export function ChatScreen() {
   const queryClient = useQueryClient();
   const reply = useServerFn(generateReply);
   const titleFn = useServerFn(generateTitle);
+  const ownerStatusFn = useServerFn(getOwnerStatus);
+  const verifyOwner = useServerFn(verifyOwnerCode);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
