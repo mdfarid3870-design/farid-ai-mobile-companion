@@ -19,7 +19,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Conversation } from "@/lib/ai-chat.server.types";
-import { Pencil, Pin, PinOff, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  LogOut,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BrandMark } from "./BrandMark";
@@ -36,6 +46,7 @@ type Props = {
   onDelete: (id: string) => void;
   accountEmail?: string | undefined;
   onSignOut: () => void;
+  onSwitchAccount: () => void;
   ownerVerified: boolean;
   onVerifyOwner: (code: string) => Promise<boolean>;
 };
@@ -52,6 +63,7 @@ export function ConversationDrawer({
   onDelete,
   accountEmail,
   onSignOut,
+  onSwitchAccount,
   ownerVerified,
   onVerifyOwner,
 }: Props) {
@@ -166,11 +178,31 @@ export function ConversationDrawer({
             )}
           </nav>
 
-          <div className="border-t border-sidebar-border px-4 py-3">
-            <p className="truncate text-xs text-muted-foreground">{accountEmail}</p>
+          <div className="border-t border-sidebar-border px-3 py-3">
+            <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/50 px-2 py-2">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                {(accountEmail ?? "?").charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm text-sidebar-foreground">
+                  {accountEmail ?? "Signed in"}
+                </p>
+                <p className="text-xs text-muted-foreground">Signed in</p>
+              </div>
+            </div>
+
             <Button
               variant="ghost"
-              className="tap-target mt-1 h-9 w-full justify-start gap-2 px-0"
+              className="tap-target mt-1 h-10 w-full justify-start gap-2 px-2"
+              onClick={onSwitchAccount}
+            >
+              <UserPlus className="size-4 text-muted-foreground" />
+              <span className="text-sm">Add / switch Google account</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="tap-target h-10 w-full justify-start gap-2 px-2"
               onClick={() => {
                 setOwnerCode("");
                 setOwnerError(null);
@@ -184,8 +216,14 @@ export function ConversationDrawer({
                 {ownerVerified ? "Verified creator" : "Owner verification"}
               </span>
             </Button>
-            <Button variant="ghost" className="tap-target mt-1 h-9 px-0" onClick={onSignOut}>
-              Sign out
+
+            <Button
+              variant="ghost"
+              className="tap-target h-10 w-full justify-start gap-2 px-2 text-destructive hover:text-destructive"
+              onClick={onSignOut}
+            >
+              <LogOut className="size-4" />
+              <span className="text-sm">Log out</span>
             </Button>
           </div>
         </SheetContent>
