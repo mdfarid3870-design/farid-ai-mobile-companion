@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ATTACHMENT_BUCKET,
@@ -154,9 +155,16 @@ export async function signAttachment(path: string): Promise<string> {
 // ✨ NEW FEATURES - 15 ENHANCEMENTS
 // ===========================
 
+/**
+ * Extra helper set kept for upcoming features. Some of these target tables and
+ * columns that are not part of the current schema yet, so they go through a
+ * loosely typed client instead of the generated types.
+ */
+const db = supabase as unknown as SupabaseClient<any>;
+
 // 🔍 1. SEARCH MESSAGES
 export async function searchMessages(searchText: string): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("messages")
     .select("*")
     .ilike("content", `%${searchText}%`)
@@ -172,7 +180,7 @@ export async function addConversationTag(conversationId: string, tag: string) {
   const tags = await getConversationTags(conversationId);
   if (!tags.includes(tag)) {
     tags.push(tag);
-    const { error } = await supabase
+    const { error } = await db
       .from("conversations")
       .update({ tags })
       .eq("id", conversationId);
@@ -181,7 +189,7 @@ export async function addConversationTag(conversationId: string, tag: string) {
 }
 
 export async function getConversationTags(conversationId: string): Promise<string[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("conversations")
     .select("tags")
     .eq("id", conversationId)
@@ -194,7 +202,7 @@ export async function getConversationTags(conversationId: string): Promise<strin
 export async function removeConversationTag(conversationId: string, tag: string) {
   const tags = await getConversationTags(conversationId);
   const updated = tags.filter((t) => t !== tag);
-  const { error } = await supabase
+  const { error } = await db
     .from("conversations")
     .update({ tags: updated })
     .eq("id", conversationId);
@@ -203,7 +211,7 @@ export async function removeConversationTag(conversationId: string, tag: string)
 
 // 👍 3. MESSAGE REACTIONS
 export async function addMessageReaction(messageId: string, type: "like" | "helpful" | "bookmark") {
-  const { error } = await supabase
+  const { error } = await db
     .from("messages")
     .update({ reactions: { [type]: true } })
     .eq("id", messageId);
@@ -212,7 +220,7 @@ export async function addMessageReaction(messageId: string, type: "like" | "help
 
 // 💾 4. EXPORT CONVERSATION
 export async function exportConversation(conversationId: string, format: "json" | "txt" | "markdown") {
-  const { data: messages, error: msgError } = await supabase
+  const { data: messages, error: msgError } = await db
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
@@ -220,7 +228,7 @@ export async function exportConversation(conversationId: string, format: "json" 
 
   if (msgError) throw msgError;
 
-  const { data: conv } = await supabase
+  const { data: conv } = await db
     .from("conversations")
     .select("title")
     .eq("id", conversationId)
@@ -246,12 +254,12 @@ export async function exportConversation(conversationId: string, format: "json" 
 
 // 📊 5. CHAT STATISTICS
 export async function getChatStats(userId: string) {
-  const { data: conversations } = await supabase
+  const { data: conversations } = await db
     .from("conversations")
     .select("id")
     .eq("user_id", userId);
 
-  const { data: messages } = await supabase
+  const { data: messages } = await db
     .from("messages")
     .select("id")
     .eq("user_id", userId);
@@ -267,7 +275,7 @@ export async function getChatStats(userId: string) {
 
 // 👤 6. USER PROFILE
 export async function getUserProfile(userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("user_profiles")
     .select("*")
     .eq("user_id", userId)
@@ -278,7 +286,7 @@ export async function getUserProfile(userId: string) {
 }
 
 export async function updateUserProfile(userId: string, profile: any) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("user_profiles")
     .upsert({
       user_id: userId,
@@ -294,7 +302,7 @@ export async function updateUserProfile(userId: string, profile: any) {
 
 // ⚙️ 7. USER SETTINGS
 export async function getUserSettings(userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("user_settings")
     .select("*")
     .eq("user_id", userId)
@@ -305,7 +313,7 @@ export async function getUserSettings(userId: string) {
 }
 
 export async function updateUserSettings(userId: string, settings: any) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("user_settings")
     .upsert({
       user_id: userId,
@@ -321,7 +329,7 @@ export async function updateUserSettings(userId: string, settings: any) {
 
 // ⭐ 8. SAVED MESSAGES
 export async function saveMessage(userId: string, messageId: string) {
-  const { error } = await supabase
+  const { error } = await db
     .from("saved_messages")
     .insert({ user_id: userId, message_id: messageId });
 
@@ -329,7 +337,7 @@ export async function saveMessage(userId: string, messageId: string) {
 }
 
 export async function getSavedMessages(userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("saved_messages")
     .select("message_id")
     .eq("user_id", userId);
@@ -340,7 +348,7 @@ export async function getSavedMessages(userId: string) {
 
 // 📦 9. ARCHIVED CHATS
 export async function archiveConversation(conversationId: string, archived: boolean) {
-  const { error } = await supabase
+  const { error } = await db
     .from("conversations")
     .update({ archived })
     .eq("id", conversationId);
@@ -350,7 +358,7 @@ export async function archiveConversation(conversationId: string, archived: bool
 
 // ⚡ 10. QUICK ACTIONS
 export async function addQuickAction(userId: string, name: string, prompt: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("quick_actions")
     .insert({ user_id: userId, name, prompt })
     .select()
@@ -361,7 +369,7 @@ export async function addQuickAction(userId: string, name: string, prompt: strin
 }
 
 export async function getQuickActions(userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("quick_actions")
     .select("*")
     .eq("user_id", userId);
@@ -372,7 +380,7 @@ export async function getQuickActions(userId: string) {
 
 // 🔀 11. CONVERSATION BRANCHING
 export async function createConversationBranch(messageId: string, response: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("message_branches")
     .insert({ message_id: messageId, response })
     .select()
@@ -383,7 +391,7 @@ export async function createConversationBranch(messageId: string, response: stri
 }
 
 export async function getMessageBranches(messageId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("message_branches")
     .select("*")
     .eq("message_id", messageId);
@@ -394,7 +402,7 @@ export async function getMessageBranches(messageId: string) {
 
 // 📌 12. PINNED MESSAGES
 export async function pinMessage(messageId: string, pinned: boolean) {
-  const { error } = await supabase
+  const { error } = await db
     .from("messages")
     .update({ pinned })
     .eq("id", messageId);
@@ -403,7 +411,7 @@ export async function pinMessage(messageId: string, pinned: boolean) {
 }
 
 export async function getPinnedMessages(conversationId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
@@ -421,7 +429,7 @@ export async function translateMessage(text: string, targetLanguage: string) {
 
 // 🗑️ 14. AUTO DELETE CHATS
 export async function setAutoDeleteChat(conversationId: string, daysAfter: number | null) {
-  const { error } = await supabase
+  const { error } = await db
     .from("conversations")
     .update({ auto_delete_after_days: daysAfter })
     .eq("id", conversationId);
@@ -431,7 +439,7 @@ export async function setAutoDeleteChat(conversationId: string, daysAfter: numbe
 
 // 📈 15. CONVERSATION ANALYTICS
 export async function getConversationAnalytics(conversationId: string) {
-  const { data: messages } = await supabase
+  const { data: messages } = await db
     .from("messages")
     .select("role, created_at")
     .eq("conversation_id", conversationId);
