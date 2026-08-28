@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/", replace: true });
@@ -51,7 +53,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
         if (!data.session) {
@@ -64,7 +66,12 @@ function AuthPage() {
       }
       navigate({ to: "/", replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sign in failed. Please try again.");
+      const message = error instanceof Error ? error.message : "";
+      if (message.toLowerCase().includes("invalid login credentials")) {
+        toast.error("Email or password is incorrect. Create an account first or reset your password.");
+      } else {
+        toast.error(message || "Sign in failed. Please try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -73,28 +80,39 @@ function AuthPage() {
   const signInWithGoogle = async () => {
     try {
       setBusy(true);
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
       });
 
-      if (error) {
-        toast.error(`Google sign-in failed: ${error.message}`);
+      if (result.error) {
+        toast.error("Google sign-in could not start. Please try again.");
         return;
       }
-
-      // OAuth redirects automatically
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      if (result.redirected) return;
+      navigate({ to: "/", replace: true });
     } catch (error) {
       toast.error("Google sign-in failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendPasswordReset = async () => {
+    if (!email.trim()) {
+      toast.error("Enter your email address first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("Password reset link sent. Check your email.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send the reset link.");
     } finally {
       setBusy(false);
     }
@@ -157,7 +175,20 @@ function AuthPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Password</Label>
+                {mode === "signin" ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto min-h-0 px-0 py-0 text-xs"
+                    disabled={busy}
+                    onClick={sendPasswordReset}
+                  >
+                    Forgot password?
+                  </Button>
+                ) : null}
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -170,17 +201,26 @@ function AuthPage() {
               />
             </div>
             <Button type="submit" className="tap-target h-12 w-full" disabled={busy}>
-              {mode === "signup" ? "Create account" : "Sign in"}
+              {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
             </Button>
+            {resetSent ? (
+              <p className="text-center text-xs text-muted-foreground">
+                Reset link sent. Check your inbox and spam folder.
+              </p>
+            ) : null}
           </form>
 
-          <button
+          <Button
             type="button"
-            className="tap-target w-full text-sm text-muted-foreground underline-offset-4 hover:underline"
-            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+            variant="link"
+            className="tap-target w-full text-sm text-muted-foreground"
+            onClick={() => {
+              setResetSent(false);
+              setMode(mode === "signup" ? "signin" : "signup");
+            }}
           >
             {mode === "signup" ? "Already have an account? Sign in" : "New here? Create an account"}
-          </button>
+          </Button>
         </div>
       )}
     </main>
