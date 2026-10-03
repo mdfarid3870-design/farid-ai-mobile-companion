@@ -11,13 +11,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useTheme } from "@/hooks/useTheme";
 import type { Conversation } from "@/lib/ai-chat.server.types";
 import {
   LogOut,
@@ -26,6 +30,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Settings,
   ShieldCheck,
   Trash2,
   UserPlus,
@@ -67,6 +72,7 @@ export function ConversationDrawer({
   ownerVerified,
   onVerifyOwner,
 }: Props) {
+  const { theme, setTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [renaming, setRenaming] = useState<Conversation | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -179,6 +185,50 @@ export function ConversationDrawer({
           </nav>
 
           <div className="border-t border-sidebar-border px-3 py-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="tap-target mb-1 h-10 w-full justify-start gap-2 px-2"
+                >
+                  <Settings className="size-4 text-muted-foreground" />
+                  <span className="text-sm">Settings</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[92vw] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Settings</DialogTitle>
+                  <DialogDescription>Customize your FARID AI appearance.</DialogDescription>
+                </DialogHeader>
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-medium">Theme</legend>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={theme === "light" ? "default" : "outline"}
+                      className="tap-target flex-1"
+                      aria-pressed={theme === "light"}
+                      onClick={() => setTheme("light")}
+                    >
+                      Light
+                    </Button>
+                    <Button
+                      variant={theme === "dark" ? "default" : "outline"}
+                      className="tap-target flex-1"
+                      aria-pressed={theme === "dark"}
+                      onClick={() => setTheme("dark")}
+                    >
+                      Dark
+                    </Button>
+                  </div>
+                </fieldset>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="ghost" className="tap-target">Close</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/50 px-2 py-2">
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                 {(accountEmail ?? "?").charAt(0).toUpperCase()}
