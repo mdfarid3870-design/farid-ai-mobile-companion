@@ -61,6 +61,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Settings,
   Sun,
   Video,
   WifiOff,
@@ -98,7 +99,7 @@ async function copyToClipboard(text: string) {
 
 export function ChatScreen() {
   const { user, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme, toggleTheme } = useTheme();
   const online = useOnline();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -348,6 +349,29 @@ export function ChatScreen() {
           <BrandMark className="size-7" />
           <span className="truncate font-display text-sm font-semibold">{activeTitle}</span>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-lg" aria-label="Settings" title="Settings">
+              <Settings className="size-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" aria-label="Settings">
+            <DropdownMenuItem onSelect={() => setTheme("light")}>
+              <Sun className="mr-2 size-4" />
+              Light theme
+              {theme === "light" ? (
+                <Check className="ml-auto size-4" aria-label="Selected" />
+              ) : null}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setTheme("dark")}>
+              <Moon className="mr-2 size-4" />
+              Dark theme
+              {theme === "dark" ? (
+                <Check className="ml-auto size-4" aria-label="Selected" />
+              ) : null}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost"
           size="icon-lg"
