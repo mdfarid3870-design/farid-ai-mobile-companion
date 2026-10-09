@@ -14,11 +14,7 @@ function isBlockedContext() {
   }
   const host = window.location.hostname;
   if (host.startsWith("id-preview--") || host.startsWith("preview--")) return true;
-  const blockedSuffixes = [
-    "lovableproject.com",
-    "lovableproject-dev.com",
-    "beta.lovable.dev",
-  ];
+  const blockedSuffixes = ["lovableproject.com", "lovableproject-dev.com", "beta.lovable.dev"];
   return blockedSuffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 

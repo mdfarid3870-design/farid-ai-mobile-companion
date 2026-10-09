@@ -68,7 +68,9 @@ function AuthPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (message.toLowerCase().includes("invalid login credentials")) {
-        toast.error("Email or password is incorrect. Create an account first or reset your password.");
+        toast.error(
+          "Email or password is incorrect. Create an account first or reset your password.",
+        );
       } else {
         toast.error(message || "Sign in failed. Please try again.");
       }
