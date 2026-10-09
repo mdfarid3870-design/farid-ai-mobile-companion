@@ -1,11 +1,6 @@
 /** Client-safe types shared with the server chat helpers. */
 export type AssistantFailure =
-  | "offline"
-  | "config"
-  | "quota"
-  | "blocked"
-  | "bad_request"
-  | "server";
+  "offline" | "config" | "quota" | "blocked" | "bad_request" | "server";
 
 /** A file the user attached to a message (stored in the private chat bucket). */
 export type ChatAttachment = {
@@ -83,6 +78,4 @@ export function isAcceptedAttachmentType(file: File): boolean {
   return ACCEPTED_ATTACHMENT_EXTENSIONS.includes(ext);
 }
 
-export const ATTACHMENT_ACCEPT =
-  "image/*,video/*,.pdf,.zip,.doc,.docx,.txt,.mp4,.mov"; 
-
+export const ATTACHMENT_ACCEPT = "image/*,video/*,.pdf,.zip,.doc,.docx,.txt,.mp4,.mov";

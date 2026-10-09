@@ -223,7 +223,9 @@ export function ConversationDrawer({
                 </fieldset>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="ghost" className="tap-target">Close</Button>
+                    <Button variant="ghost" className="tap-target">
+                      Close
+                    </Button>
                   </DialogClose>
                 </DialogFooter>
               </DialogContent>

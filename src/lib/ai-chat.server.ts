@@ -1,10 +1,19 @@
 import type { Database } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateText, streamText, type ModelMessage } from "ai";
+import { generateText, streamText, type LanguageModel, type ModelMessage } from "ai";
 
-import { ATTACHMENT_BUCKET, type AssistantFailure, type ChatAttachment } from "./ai-chat.server.types";
+import {
+  ATTACHMENT_BUCKET,
+  type AssistantFailure,
+  type ChatAttachment,
+} from "./ai-chat.server.types";
 
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import {
+  createGeminiModel,
+  getGeminiApiKeys,
+  getGeminiModelCandidates,
+} from "./gemini-provider.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -25,12 +34,9 @@ const SYSTEM_PROMPT = [
   "Only describe attachment contents that are actually accessible in the supplied conversation or file parts. If an attachment cannot be read, explain the limitation and ask for its text or a supported version.",
 ].join(" ");
 
-function defaultModel() {
-  return process.env["GEMINI_MODEL"] || "google/gemini-3.7-flash";
-}
-
 function classify(error: unknown): AssistantFailure {
-  const status = (error as { statusCode?: number; status?: number } | null)?.statusCode ??
+  const status =
+    (error as { statusCode?: number; status?: number } | null)?.statusCode ??
     (error as { status?: number } | null)?.status;
   if (status === 401) return "config";
   if (status === 402 || status === 429) return "quota";
@@ -93,15 +99,20 @@ export async function runAssistantReply(params: {
   untilMessageId?: string;
 }): Promise<AssistantResult> {
   const { supabase, userId, conversationId, untilMessageId } = params;
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return { ok: false, kind: "config" };
+  const geminiKeys = getGeminiApiKeys();
+  const lovableKey = process.env["LOVABLE_API_KEY"];
 
-  let text: string;
+  if (geminiKeys.length === 0 && !lovableKey) {
+    return { ok: false, kind: "config" };
+  }
+
+  let text = "";
+  let lastError: unknown = null;
+
   try {
     const history = await loadHistory(supabase, conversationId, untilMessageId);
     if (history.length === 0) return { ok: false, kind: "bad_request" };
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
     const { ownerPromptBlock } = await import("./owner.server");
     const { data: ownerRow } = await supabase
       .from("owner_verifications")
@@ -115,22 +126,64 @@ export async function runAssistantReply(params: {
         content:
           row.role === "assistant"
             ? row.content
-            : await buildUserContent(supabase, row.content, row.attachments as ChatAttachment[] | null),
+            : await buildUserContent(
+                supabase,
+                row.content,
+                row.attachments as ChatAttachment[] | null,
+              ),
       })),
     );
-    // Streamed inside the handler so long answers never stall the connection.
-    const result = streamText({
-      model: gateway(defaultModel()),
-      system: systemPrompt,
-      messages: modelMessages as ModelMessage[],
-    });
-    text = (await result.text).trim();
+
+    // 1. Try Gemini API keys with rotation and model fallbacks
+    if (geminiKeys.length > 0) {
+      const modelCandidates = getGeminiModelCandidates();
+      for (const key of geminiKeys) {
+        for (const modelCandidate of modelCandidates) {
+          try {
+            const modelInstance = createGeminiModel(key, modelCandidate);
+            const result = streamText({
+              model: modelInstance,
+              system: systemPrompt,
+              messages: modelMessages as ModelMessage[],
+            });
+            const responseText = (await result.text).trim();
+            if (responseText) {
+              text = responseText;
+              break;
+            }
+          } catch (err) {
+            console.error(`[farid-ai] Gemini API error (model: ${modelCandidate}):`, err);
+            lastError = err;
+          }
+        }
+        if (text) break;
+      }
+    }
+
+    // 2. Fallback to Lovable AI Gateway if Gemini didn't produce text
+    if (!text && lovableKey) {
+      try {
+        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const defaultModel = process.env["GEMINI_MODEL"] || "google/gemini-3.7-flash";
+        const result = streamText({
+          model: gateway(defaultModel),
+          system: systemPrompt,
+          messages: modelMessages as ModelMessage[],
+        });
+        text = (await result.text).trim();
+      } catch (err) {
+        console.error("[farid-ai] Lovable Gateway error:", err);
+        lastError = err;
+      }
+    }
   } catch (error) {
-    console.error("[farid-ai] reply failed", error);
+    console.error("[farid-ai] reply processing failed", error);
     return { ok: false, kind: classify(error) };
   }
 
-  if (!text) return { ok: false, kind: "server" };
+  if (!text) {
+    return { ok: false, kind: classify(lastError ?? new Error("No model response generated")) };
+  }
 
   const { data, error } = await supabase
     .from("messages")
@@ -157,22 +210,61 @@ export async function runTitleGeneration(params: {
   conversationId: string;
 }): Promise<{ ok: boolean; title?: string }> {
   const { supabase, conversationId } = params;
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return { ok: false };
+  const geminiKeys = getGeminiApiKeys();
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+
+  if (geminiKeys.length === 0 && !lovableKey) return { ok: false };
 
   try {
     const history = await loadHistory(supabase, conversationId);
     const firstUser = history.find((row) => row.role === "user");
     if (!firstUser) return { ok: false };
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const { text } = await generateText({
-      model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-3.1-flash-lite"),
-      system: "Write a 2-5 word title for this chat. Plain text only, no quotes, no punctuation at the end.",
-      prompt: firstUser.content.slice(0, 800),
-    });
+    const prompt = firstUser.content.slice(0, 800);
+    const system =
+      "Write a 2-5 word title for this chat. Plain text only, no quotes, no punctuation at the end.";
+    let generatedText = "";
 
-    const title = text.replace(/["\n]/g, "").trim().slice(0, 60);
+    // 1. Try Gemini API keys
+    if (geminiKeys.length > 0) {
+      const modelCandidates = getGeminiModelCandidates();
+      for (const key of geminiKeys) {
+        for (const modelCandidate of modelCandidates) {
+          try {
+            const modelInstance = createGeminiModel(key, modelCandidate);
+            const { text } = await generateText({
+              model: modelInstance,
+              system,
+              prompt,
+            });
+            if (text.trim()) {
+              generatedText = text.trim();
+              break;
+            }
+          } catch (err) {
+            console.error(`[farid-ai] title gen Gemini error (${modelCandidate}):`, err);
+          }
+        }
+        if (generatedText) break;
+      }
+    }
+
+    // 2. Fallback to Lovable Gateway
+    if (!generatedText && lovableKey) {
+      try {
+        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const { text } = await generateText({
+          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-3.1-flash-lite"),
+          system,
+          prompt,
+        });
+        generatedText = text.trim();
+      } catch (err) {
+        console.error("[farid-ai] title gen Lovable Gateway error:", err);
+      }
+    }
+
+    const title = generatedText.replace(/["\n]/g, "").trim().slice(0, 60);
     if (!title) return { ok: false };
 
     const { error } = await supabase

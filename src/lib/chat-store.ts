@@ -180,10 +180,7 @@ export async function addConversationTag(conversationId: string, tag: string) {
   const tags = await getConversationTags(conversationId);
   if (!tags.includes(tag)) {
     tags.push(tag);
-    const { error } = await db
-      .from("conversations")
-      .update({ tags })
-      .eq("id", conversationId);
+    const { error } = await db.from("conversations").update({ tags }).eq("id", conversationId);
     if (error) throw error;
   }
 }
@@ -219,7 +216,10 @@ export async function addMessageReaction(messageId: string, type: "like" | "help
 }
 
 // 💾 4. EXPORT CONVERSATION
-export async function exportConversation(conversationId: string, format: "json" | "txt" | "markdown") {
+export async function exportConversation(
+  conversationId: string,
+  format: "json" | "txt" | "markdown",
+) {
   const { data: messages, error: msgError } = await db
     .from("messages")
     .select("*")
@@ -254,32 +254,21 @@ export async function exportConversation(conversationId: string, format: "json" 
 
 // 📊 5. CHAT STATISTICS
 export async function getChatStats(userId: string) {
-  const { data: conversations } = await db
-    .from("conversations")
-    .select("id")
-    .eq("user_id", userId);
+  const { data: conversations } = await db.from("conversations").select("id").eq("user_id", userId);
 
-  const { data: messages } = await db
-    .from("messages")
-    .select("id")
-    .eq("user_id", userId);
+  const { data: messages } = await db.from("messages").select("id").eq("user_id", userId);
 
   return {
     totalConversations: conversations?.length ?? 0,
     totalMessages: messages?.length ?? 0,
-    averageMessagesPerChat: conversations && messages 
-      ? messages.length / (conversations.length || 1)
-      : 0,
+    averageMessagesPerChat:
+      conversations && messages ? messages.length / (conversations.length || 1) : 0,
   };
 }
 
 // 👤 6. USER PROFILE
 export async function getUserProfile(userId: string) {
-  const { data, error } = await db
-    .from("user_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
+  const { data, error } = await db.from("user_profiles").select("*").eq("user_id", userId).single();
 
   if (error && error.code !== "PGRST116") throw error;
   return data;
@@ -302,11 +291,7 @@ export async function updateUserProfile(userId: string, profile: any) {
 
 // ⚙️ 7. USER SETTINGS
 export async function getUserSettings(userId: string) {
-  const { data, error } = await db
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
+  const { data, error } = await db.from("user_settings").select("*").eq("user_id", userId).single();
 
   if (error && error.code !== "PGRST116") throw error;
   return data;
@@ -348,10 +333,7 @@ export async function getSavedMessages(userId: string) {
 
 // 📦 9. ARCHIVED CHATS
 export async function archiveConversation(conversationId: string, archived: boolean) {
-  const { error } = await db
-    .from("conversations")
-    .update({ archived })
-    .eq("id", conversationId);
+  const { error } = await db.from("conversations").update({ archived }).eq("id", conversationId);
 
   if (error) throw error;
 }
@@ -369,10 +351,7 @@ export async function addQuickAction(userId: string, name: string, prompt: strin
 }
 
 export async function getQuickActions(userId: string) {
-  const { data, error } = await db
-    .from("quick_actions")
-    .select("*")
-    .eq("user_id", userId);
+  const { data, error } = await db.from("quick_actions").select("*").eq("user_id", userId);
 
   if (error) throw error;
   return data ?? [];
@@ -391,10 +370,7 @@ export async function createConversationBranch(messageId: string, response: stri
 }
 
 export async function getMessageBranches(messageId: string) {
-  const { data, error } = await db
-    .from("message_branches")
-    .select("*")
-    .eq("message_id", messageId);
+  const { data, error } = await db.from("message_branches").select("*").eq("message_id", messageId);
 
   if (error) throw error;
   return data ?? [];
@@ -402,10 +378,7 @@ export async function getMessageBranches(messageId: string) {
 
 // 📌 12. PINNED MESSAGES
 export async function pinMessage(messageId: string, pinned: boolean) {
-  const { error } = await db
-    .from("messages")
-    .update({ pinned })
-    .eq("id", messageId);
+  const { error } = await db.from("messages").update({ pinned }).eq("id", messageId);
 
   if (error) throw error;
 }

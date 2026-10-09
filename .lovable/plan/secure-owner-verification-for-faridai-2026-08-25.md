@@ -20,6 +20,7 @@ Adds one feature: the creator (Farid) can verify ownership with a secret code, a
 ## Technical changes (minimal)
 
 Backend (reuses existing Lovable Cloud + auth, no new system):
+
 - Secret stored as a server-only project secret `OWNER_SECRET_CODE`, seeded with the placeholder `[MY_SECRET_OWNER_CODE]` for now. Never read on the client, never logged, never sent to the model.
 - Migration: new table `public.owner_verifications (user_id uuid primary key, verified_at timestamptz)` with GRANTs + RLS so a user can only read their own row; writes happen server-side only.
 - New `src/lib/owner.functions.ts` with two authenticated server functions:
@@ -27,9 +28,11 @@ Backend (reuses existing Lovable Cloud + auth, no new system):
   - `getOwnerStatus()` — returns `{ ownerVerified: boolean }`.
 
 AI prompt (single, additive change in `src/lib/ai-chat.server.ts`):
+
 - The reply handler looks up the caller's verification row and appends a small block to the existing system prompt: `owner_verified: true|false`, plus the creator-question and privacy/security rules above. The secret itself never enters the prompt.
 
 Frontend (two files, additive):
+
 - `src/components/farid/ConversationDrawer.tsx`: new owner-verification row + dialog, existing components and tokens only.
 - `src/components/farid/ChatScreen.tsx`: query owner status and pass it (plus a refresh callback) to the drawer.
 

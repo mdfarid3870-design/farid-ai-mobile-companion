@@ -205,33 +205,30 @@ export function ChatScreen() {
     [refresh, reply, titleFn],
   );
 
-  const addFiles = useCallback(
-    (picked: FileList | null) => {
-      if (!picked?.length) return;
-      const next: File[] = [];
-      for (const file of Array.from(picked)) {
-        if (!isAcceptedAttachmentType(file)) {
-          toast.error(
-            `${file.name} isn't supported. Use photos, videos, PDFs, ZIPs, DOC/DOCX, or TXT.`,
-          );
-          continue;
-        }
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-          toast.error(`${file.name} is larger than 10 MB.`);
-          continue;
-        }
-        next.push(file);
+  const addFiles = useCallback((picked: FileList | null) => {
+    if (!picked?.length) return;
+    const next: File[] = [];
+    for (const file of Array.from(picked)) {
+      if (!isAcceptedAttachmentType(file)) {
+        toast.error(
+          `${file.name} isn't supported. Use photos, videos, PDFs, ZIPs, DOC/DOCX, or TXT.`,
+        );
+        continue;
       }
-      setFiles((current) => {
-        const merged = [...current, ...next];
-        if (merged.length > MAX_ATTACHMENTS) {
-          toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per message.`);
-        }
-        return merged.slice(0, MAX_ATTACHMENTS);
-      });
-    },
-    [],
-  );
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(`${file.name} is larger than 10 MB.`);
+        continue;
+      }
+      next.push(file);
+    }
+    setFiles((current) => {
+      const merged = [...current, ...next];
+      if (merged.length > MAX_ATTACHMENTS) {
+        toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per message.`);
+      }
+      return merged.slice(0, MAX_ATTACHMENTS);
+    });
+  }, []);
 
   const send = useCallback(
     async (text: string) => {
@@ -260,7 +257,11 @@ export function ChatScreen() {
           try {
             attachments = await Promise.all(
               attached.map((file) =>
-                uploadAttachment({ file, userId: user.id, conversationId: conversationId as string }),
+                uploadAttachment({
+                  file,
+                  userId: user.id,
+                  conversationId: conversationId as string,
+                }),
               ),
             );
           } finally {
@@ -366,9 +367,7 @@ export function ChatScreen() {
             <DropdownMenuItem onSelect={() => setTheme("dark")}>
               <Moon className="mr-2 size-4" />
               Dark theme
-              {theme === "dark" ? (
-                <Check className="ml-auto size-4" aria-label="Selected" />
-              ) : null}
+              {theme === "dark" ? <Check className="ml-auto size-4" aria-label="Selected" /> : null}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -408,9 +407,7 @@ export function ChatScreen() {
           {list.length === 0 && !pending ? (
             <ConversationEmptyState>
               <BrandMark className="size-14 shadow-glow" />
-              <h2 className="mt-3 font-display text-xl font-semibold">
-                How can I help you today?
-              </h2>
+              <h2 className="mt-3 font-display text-xl font-semibold">How can I help you today?</h2>
               <p className="text-sm text-muted-foreground">Ask anything — FARID AI is ready.</p>
               <div className="mt-4 grid w-full max-w-md gap-2">
                 {SUGGESTIONS.map((suggestion) => (
@@ -631,7 +628,9 @@ export function ChatScreen() {
                 />
                 <PromptInputSubmit
                   {...(pending || uploading ? { status: "submitted" as const } : {})}
-                  disabled={pending || uploading || (draft.trim().length === 0 && files.length === 0)}
+                  disabled={
+                    pending || uploading || (draft.trim().length === 0 && files.length === 0)
+                  }
                 />
               </div>
             </PromptInputFooter>

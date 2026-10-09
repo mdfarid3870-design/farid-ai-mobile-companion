@@ -68,8 +68,12 @@ function ResetPasswordPage() {
     <main className="app-shell safe-top safe-bottom flex items-center justify-center bg-background px-5">
       <section className="w-full max-w-sm space-y-5" aria-labelledby="reset-heading">
         <div className="space-y-2 text-center">
-          <h1 id="reset-heading" className="font-display text-2xl font-bold">Reset password</h1>
-          <p className="text-sm text-muted-foreground">Choose a new password for your FARID AI account.</p>
+          <h1 id="reset-heading" className="font-display text-2xl font-bold">
+            Reset password
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Choose a new password for your FARID AI account.
+          </p>
         </div>
 
         {checking ? (
@@ -108,8 +112,14 @@ function ResetPasswordPage() {
           </form>
         ) : (
           <div className="space-y-3 text-center">
-            <p className="text-sm text-muted-foreground">This reset link is invalid or has expired.</p>
-            <Button variant="outline" className="tap-target w-full" onClick={() => navigate({ to: "/auth" })}>
+            <p className="text-sm text-muted-foreground">
+              This reset link is invalid or has expired.
+            </p>
+            <Button
+              variant="outline"
+              className="tap-target w-full"
+              onClick={() => navigate({ to: "/auth" })}
+            >
               Back to sign in
             </Button>
           </div>
