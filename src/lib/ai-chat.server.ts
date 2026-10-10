@@ -1,6 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateText, streamText, type LanguageModel, type ModelMessage } from "ai";
+import { generateText, streamText, type ModelMessage } from "ai";
 
 import {
   ATTACHMENT_BUCKET,
@@ -11,8 +11,10 @@ import {
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 import {
   createGeminiModel,
-  getGeminiApiKeys,
+  getPrioritizedGeminiKeys,
   getGeminiModelCandidates,
+  reportGeminiKeyFailure,
+  reportGeminiKeySuccess,
 } from "./gemini-provider.server";
 
 type Client = SupabaseClient<Database>;
@@ -45,6 +47,23 @@ function classify(error: unknown): AssistantFailure {
   return "server";
 }
 
+function isQuotaOrRateLimit(error: unknown): boolean {
+  const status =
+    (error as { statusCode?: number; status?: number } | null)?.statusCode ??
+    (error as { status?: number } | null)?.status;
+  if (status === 429 || status === 402) return true;
+  const msg = String((error as { message?: string } | null)?.message || "").toLowerCase();
+  return (
+    msg.includes("429") ||
+    msg.includes("quota") ||
+    msg.includes("rate limit") ||
+    msg.includes("resource_exhausted")
+  );
+}
+
+// Keep sliding window of conversation history to prevent hitting Gemini TPM limit
+const MAX_HISTORY_MESSAGES = 18;
+
 async function loadHistory(supabase: Client, conversationId: string, untilMessageId?: string) {
   const { data, error } = await supabase
     .from("messages")
@@ -54,9 +73,17 @@ async function loadHistory(supabase: Client, conversationId: string, untilMessag
 
   if (error) throw error;
   const rows = data ?? [];
-  if (!untilMessageId) return rows;
-  const index = rows.findIndex((row) => row.id === untilMessageId);
-  return index === -1 ? rows : rows.slice(0, index + 1);
+  const scopedRows = (() => {
+    if (!untilMessageId) return rows;
+    const index = rows.findIndex((row) => row.id === untilMessageId);
+    return index === -1 ? rows : rows.slice(0, index + 1);
+  })();
+
+  // Sliding window: keep the latest messages to prevent token overflow
+  if (scopedRows.length > MAX_HISTORY_MESSAGES) {
+    return scopedRows.slice(-MAX_HISTORY_MESSAGES);
+  }
+  return scopedRows;
 }
 
 type UserPart =
@@ -99,7 +126,7 @@ export async function runAssistantReply(params: {
   untilMessageId?: string;
 }): Promise<AssistantResult> {
   const { supabase, userId, conversationId, untilMessageId } = params;
-  const geminiKeys = getGeminiApiKeys();
+  const geminiKeys = getPrioritizedGeminiKeys();
   const lovableKey = process.env["LOVABLE_API_KEY"];
 
   if (geminiKeys.length === 0 && !lovableKey) {
@@ -134,10 +161,11 @@ export async function runAssistantReply(params: {
       })),
     );
 
-    // 1. Try Gemini API keys with rotation and model fallbacks
+    // 1. Try Gemini API keys with intelligent rotation and model fallbacks
     if (geminiKeys.length > 0) {
       const modelCandidates = getGeminiModelCandidates();
       for (const key of geminiKeys) {
+        let keyFailed = false;
         for (const modelCandidate of modelCandidates) {
           try {
             const modelInstance = createGeminiModel(key, modelCandidate);
@@ -149,12 +177,21 @@ export async function runAssistantReply(params: {
             const responseText = (await result.text).trim();
             if (responseText) {
               text = responseText;
+              reportGeminiKeySuccess(key);
               break;
             }
           } catch (err) {
             console.error(`[farid-ai] Gemini API error (model: ${modelCandidate}):`, err);
             lastError = err;
+            if (isQuotaOrRateLimit(err)) {
+              reportGeminiKeyFailure(key, true);
+              keyFailed = true;
+              break; // Switch to the next API key immediately on quota/rate limit
+            }
           }
+        }
+        if (keyFailed) {
+          reportGeminiKeyFailure(key, false);
         }
         if (text) break;
       }
@@ -164,7 +201,7 @@ export async function runAssistantReply(params: {
     if (!text && lovableKey) {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
-        const defaultModel = process.env["GEMINI_MODEL"] || "google/gemini-3.7-flash";
+        const defaultModel = process.env["GEMINI_MODEL"] || "google/gemini-2.5-flash";
         const result = streamText({
           model: gateway(defaultModel),
           system: systemPrompt,
@@ -210,7 +247,7 @@ export async function runTitleGeneration(params: {
   conversationId: string;
 }): Promise<{ ok: boolean; title?: string }> {
   const { supabase, conversationId } = params;
-  const geminiKeys = getGeminiApiKeys();
+  const geminiKeys = getPrioritizedGeminiKeys();
   const lovableKey = process.env["LOVABLE_API_KEY"];
 
   if (geminiKeys.length === 0 && !lovableKey) return { ok: false };
@@ -229,6 +266,7 @@ export async function runTitleGeneration(params: {
     if (geminiKeys.length > 0) {
       const modelCandidates = getGeminiModelCandidates();
       for (const key of geminiKeys) {
+        let keyFailed = false;
         for (const modelCandidate of modelCandidates) {
           try {
             const modelInstance = createGeminiModel(key, modelCandidate);
@@ -239,11 +277,20 @@ export async function runTitleGeneration(params: {
             });
             if (text.trim()) {
               generatedText = text.trim();
+              reportGeminiKeySuccess(key);
               break;
             }
           } catch (err) {
             console.error(`[farid-ai] title gen Gemini error (${modelCandidate}):`, err);
+            if (isQuotaOrRateLimit(err)) {
+              reportGeminiKeyFailure(key, true);
+              keyFailed = true;
+              break;
+            }
           }
+        }
+        if (keyFailed) {
+          reportGeminiKeyFailure(key, false);
         }
         if (generatedText) break;
       }
@@ -254,7 +301,7 @@ export async function runTitleGeneration(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const { text } = await generateText({
-          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-3.1-flash-lite"),
+          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-2.5-flash-lite"),
           system,
           prompt,
         });
