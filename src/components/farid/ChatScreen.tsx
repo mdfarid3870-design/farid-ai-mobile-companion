@@ -337,8 +337,8 @@ export function ChatScreen() {
   const activeTitle = "FaridAI";
 
   return (
-    <div className="app-shell flex flex-col bg-background">
-      <header className="safe-top flex items-center gap-1 border-b border-border/60 bg-background/90 px-2 py-2 backdrop-blur">
+    <div className="app-shell ambient-glow flex flex-col">
+      <header className="safe-top flex items-center gap-1 glass border-b px-2 py-2">
         <Button
           variant="ghost"
           size="icon-lg"
@@ -407,8 +407,8 @@ export function ChatScreen() {
         <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-3 pb-4">
           {list.length === 0 && !pending ? (
             <ConversationEmptyState>
-              <BrandMark className="size-14 shadow-glow" />
-              <h2 className="mt-3 font-display text-xl font-semibold">How can I help you today?</h2>
+              <BrandMark className="size-16 glow-ring animate-rise rounded-2xl" />
+              <h2 className="text-gradient-brand mt-4 font-display text-2xl font-bold animate-rise">How can I help you today?</h2>
               <p className="text-sm text-muted-foreground">Ask anything — FARID AI is ready.</p>
               <div className="mt-4 grid w-full max-w-md gap-2">
                 {SUGGESTIONS.map((suggestion) => (
@@ -416,7 +416,7 @@ export function ChatScreen() {
                     key={suggestion}
                     type="button"
                     onClick={() => send(suggestion)}
-                    className="tap-target rounded-xl border border-border bg-card px-4 py-3 text-left text-sm text-card-foreground transition-colors active:bg-accent"
+                    className="tap-target glass-card animate-rise rounded-2xl px-4 py-3 text-left text-sm text-card-foreground transition-all active:scale-[0.98] hover:glow-ring"
                   >
                     {suggestion}
                   </button>
@@ -514,8 +514,8 @@ export function ChatScreen() {
         <ConversationScrollButton />
       </ConversationView>
 
-      <div className="safe-bottom border-t border-border/60 bg-background px-3 pb-2 pt-2">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="safe-bottom px-3 pb-3 pt-2">
+        <div className="glass-card glow-ring mx-auto w-full max-w-3xl rounded-3xl">
           <PromptInput
             onSubmit={(message: PromptInputMessage, event) => {
               event.preventDefault();
