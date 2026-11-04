@@ -36,3 +36,15 @@ export const verifyOwnerCode = createServerFn({ method: "POST" })
     if (error) return { ok: false as const };
     return { ok: true as const };
   });
+
+/** Turns owner mode off for the caller by removing their verification row. */
+export const leaveOwnerMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("owner_verifications")
+      .delete()
+      .eq("user_id", context.userId);
+    return { ok: !error };
+  });

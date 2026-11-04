@@ -32,7 +32,7 @@ import {
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
 import { generateReply, generateTitle } from "@/lib/chat.functions";
-import { getOwnerStatus, verifyOwnerCode } from "@/lib/owner.functions";
+import { getOwnerStatus, leaveOwnerMode, verifyOwnerCode } from "@/lib/owner.functions";
 import {
   createConversation,
   deleteConversation,
@@ -107,6 +107,7 @@ export function ChatScreen() {
   const titleFn = useServerFn(generateTitle);
   const ownerStatusFn = useServerFn(getOwnerStatus);
   const verifyOwner = useServerFn(verifyOwnerCode);
+  const leaveOwner = useServerFn(leaveOwnerMode);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -676,6 +677,12 @@ export function ChatScreen() {
         onSignOut={handleSignOut}
         onSwitchAccount={handleSwitchAccount}
         ownerVerified={ownerStatus.data?.ownerVerified ?? false}
+        onLeaveOwner={async () => {
+          const r = await leaveOwner();
+          await ownerStatus.refetch();
+          if (r.ok) toast.success("Owner mode off.");
+          else toast.error("Could not turn off owner mode.");
+        }}
         onVerifyOwner={async (code) => {
           try {
             const result = await verifyOwner({ data: { code } });
