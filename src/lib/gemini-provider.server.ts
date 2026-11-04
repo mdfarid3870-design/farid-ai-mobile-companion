@@ -109,7 +109,7 @@ export function reportGeminiKeySuccess(key: string) {
 }
 
 export function normalizeGeminiModel(rawModel?: string): string {
-  if (!rawModel) return "gemini-2.0-flash";
+  if (!rawModel) return "gemini-3.5-flash";
   let model = rawModel.trim();
   if (model.startsWith("google/")) {
     model = model.slice("google/".length);
@@ -117,8 +117,9 @@ export function normalizeGeminiModel(rawModel?: string): string {
   if (model.startsWith("models/")) {
     model = model.slice("models/".length);
   }
-  if (!model || model === "gemini-3.7-flash") {
-    return "gemini-2.0-flash";
+  // Retired models fall back to a current one.
+  if (!model || /^gemini-(1\.|2\.)/.test(model)) {
+    return "gemini-3.5-flash";
   }
   return model;
 }
@@ -129,13 +130,7 @@ export function getGeminiModelCandidates(requestedModel?: string): string[] {
   );
 
   // Ordered fallback models: modern, fast, and high-quota models first
-  const defaults = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
-  ];
+  const defaults = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
 
   const list = [primary, ...defaults];
   return Array.from(new Set(list));
