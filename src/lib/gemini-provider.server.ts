@@ -141,7 +141,7 @@ export function getGeminiModelCandidates(requestedModel?: string): string[] {
   return Array.from(new Set(list));
 }
 
-export function createGeminiModel(apiKey: string, modelName: string) {
+export function createGeminiModel(apiKey: string, modelName: string): LanguageModel {
   const google = createGoogleGenerativeAI({ apiKey });
-  return google(modelName);
+  return google(modelName) as unknown as LanguageModel;
 }
