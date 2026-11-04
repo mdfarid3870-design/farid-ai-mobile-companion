@@ -100,7 +100,10 @@ export function ConversationDrawer({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-[86vw] max-w-sm bg-sidebar p-0 safe-top safe-bottom">
+        <SheetContent
+          side="left"
+          className="flex h-full w-[86vw] max-w-sm flex-col gap-0 overflow-hidden bg-sidebar p-0 safe-top safe-bottom"
+        >
           <SheetHeader className="border-b border-sidebar-border px-4 py-3">
             <SheetTitle className="flex items-center gap-2 text-left">
               <BrandMark className="size-7" />
@@ -124,7 +127,7 @@ export function ConversationDrawer({
             </div>
           </div>
 
-          <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-4">
+          <nav className="mt-3 min-h-0 flex-1 overscroll-contain overflow-y-auto px-2 pb-4">
             {filtered.length === 0 ? (
               <p className="px-3 py-6 text-sm text-muted-foreground">No chats found.</p>
             ) : (
