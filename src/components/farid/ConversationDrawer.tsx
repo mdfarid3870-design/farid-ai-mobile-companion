@@ -54,6 +54,7 @@ type Props = {
   onSwitchAccount: () => void;
   ownerVerified: boolean;
   onVerifyOwner: (code: string) => Promise<boolean>;
+  onLeaveOwner: () => Promise<void>;
 };
 
 export function ConversationDrawer({
@@ -71,6 +72,7 @@ export function ConversationDrawer({
   onSwitchAccount,
   ownerVerified,
   onVerifyOwner,
+  onLeaveOwner,
 }: Props) {
   const { theme, setTheme } = useTheme();
   const [query, setQuery] = useState("");
@@ -368,7 +370,18 @@ export function ConversationDrawer({
             <Button variant="ghost" className="tap-target" onClick={() => setOwnerOpen(false)}>
               Close
             </Button>
-            {ownerVerified ? null : (
+            {ownerVerified ? (
+              <Button
+                variant="destructive"
+                className="tap-target"
+                onClick={async () => {
+                  await onLeaveOwner();
+                  setOwnerOpen(false);
+                }}
+              >
+                Turn off owner mode
+              </Button>
+            ) : (
               <Button
                 className="tap-target"
                 disabled={ownerCode.trim().length === 0 || verifying}
