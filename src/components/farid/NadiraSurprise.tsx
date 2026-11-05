@@ -71,3 +71,43 @@ export function LoveNoteDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     </>
   );
 }
+
+export function NadiraWelcome({
+  open,
+  onClose,
+  onOpenNote,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onOpenNote: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="love-card max-w-[92vw] text-center sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-love text-center font-display text-3xl font-extrabold">
+            Welcome, Nadira Afrin 🌹
+          </DialogTitle>
+          <DialogDescription className="text-center font-semibold text-card-foreground">
+            এই পুরো জগতটা ফরিদ শুধু তোমার জন্য সাজিয়েছে ✨
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-sm font-medium leading-relaxed text-muted-foreground">
+          তুমি এখানে সবসময় স্পেশাল। যা মনে আসে FARID AI কে বলো — সে তোমার যত্ন নেবে, ঠিক ফরিদের মতো 💖
+        </p>
+        <div className="mt-2 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onOpenNote}
+            className="tap-target rounded-full bg-love px-5 py-2 text-sm font-bold text-primary-foreground transition active:scale-95"
+          >
+            💌 Open your love note
+          </button>
+          <button type="button" onClick={onClose} className="tap-target text-sm font-semibold text-muted-foreground">
+            Start chatting
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
