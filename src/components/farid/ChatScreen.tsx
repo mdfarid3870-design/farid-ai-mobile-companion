@@ -74,7 +74,7 @@ import { toast } from "sonner";
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
-import { HeartBurst, LoveNoteDialog } from "./NadiraSurprise";
+import { HeartBurst, LoveNoteDialog, NadiraWelcome } from "./NadiraSurprise";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,6 +113,7 @@ export function ChatScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [heartBurst, setHeartBurst] = useState(0);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [nadiraWelcome, setNadiraWelcome] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
@@ -239,6 +240,12 @@ export function ChatScreen() {
       const content = text.trim();
       const attached = files;
       if ((!content && attached.length === 0) || pending || uploading || !user) return;
+      if (content.replace(/\s+/g, " ").toLowerCase() === "nadira afrin") {
+        setDraft("");
+        setHeartBurst(Date.now());
+        setNadiraWelcome(true);
+        return;
+      }
       if (!online) {
         toast.error(OFFLINE_MESSAGE);
         return;
@@ -402,6 +409,14 @@ export function ChatScreen() {
       </header>
 
       <HeartBurst trigger={heartBurst} />
+      <NadiraWelcome
+        open={nadiraWelcome}
+        onClose={() => setNadiraWelcome(false)}
+        onOpenNote={() => {
+          setNadiraWelcome(false);
+          setNoteOpen(true);
+        }}
+      />
       {!online ? (
         <div className="flex items-center justify-center gap-2 bg-destructive/15 px-3 py-2 text-xs text-destructive">
           <WifiOff className="size-3.5" /> {OFFLINE_MESSAGE}
