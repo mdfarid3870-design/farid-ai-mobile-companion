@@ -243,6 +243,7 @@ export function ChatScreen() {
         toast.error(OFFLINE_MESSAGE);
         return;
       }
+      if (/❤|💖|💕|love|nadira|farid|valobashi|ভালোবাসি/i.test(content)) setHeartBurst(Date.now());
 
       let conversationId = activeId;
       let isFirstExchange = (messages.data?.length ?? 0) === 0;
@@ -400,6 +401,7 @@ export function ChatScreen() {
         </Button>
       </header>
 
+      <HeartBurst trigger={heartBurst} />
       {!online ? (
         <div className="flex items-center justify-center gap-2 bg-destructive/15 px-3 py-2 text-xs text-destructive">
           <WifiOff className="size-3.5" /> {OFFLINE_MESSAGE}
@@ -411,7 +413,6 @@ export function ChatScreen() {
           {list.length === 0 && !pending ? (
             <ConversationEmptyState>
               <BrandMark className="size-16 glow-ring animate-rise rounded-2xl" />
-              <HeartBurst trigger={heartBurst} />
               <LoveNoteDialog open={noteOpen} onOpenChange={setNoteOpen} />
               <h2 className="text-love mt-4 font-display text-2xl font-bold animate-rise">Welcome, Nadira ✨</h2>
               <p className="text-sm text-muted-foreground">Crafted with love by Farid for Nadira ❤️</p>
