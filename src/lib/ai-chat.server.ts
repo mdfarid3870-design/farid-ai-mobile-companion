@@ -161,8 +161,25 @@ export async function runAssistantReply(params: {
       })),
     );
 
-    // 1. Try Gemini API keys with intelligent rotation and model fallbacks
-    if (geminiKeys.length > 0) {
+    // 1. Lovable AI Gateway first (primary provider)
+    if (lovableKey) {
+      try {
+        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const result = streamText({
+          model: gateway("google/gemini-3.8-flash"),
+          system: systemPrompt,
+          messages: modelMessages as ModelMessage[],
+          maxRetries: 0,
+        });
+        text = (await result.text).trim();
+      } catch (err) {
+        console.error("[farid-ai] Lovable Gateway error:", err);
+        lastError = err;
+      }
+    }
+
+    // 2. Fallback: Gemini API keys with rotation and model fallbacks
+    if (!text && geminiKeys.length > 0) {
       const modelCandidates = getGeminiModelCandidates();
       for (const key of geminiKeys) {
         let keyFailed = false;
@@ -197,22 +214,6 @@ export async function runAssistantReply(params: {
       }
     }
 
-    // 2. Fallback to Lovable AI Gateway if Gemini didn't produce text
-    if (!text && lovableKey) {
-      try {
-        const gateway = createLovableAiGatewayProvider(lovableKey);
-        const defaultModel = process.env["GEMINI_MODEL"] || "google/gemini-2.5-flash";
-        const result = streamText({
-          model: gateway(defaultModel),
-          system: systemPrompt,
-          messages: modelMessages as ModelMessage[],
-        });
-        text = (await result.text).trim();
-      } catch (err) {
-        console.error("[farid-ai] Lovable Gateway error:", err);
-        lastError = err;
-      }
-    }
   } catch (error) {
     console.error("[farid-ai] reply processing failed", error);
     return { ok: false, kind: classify(error) };
