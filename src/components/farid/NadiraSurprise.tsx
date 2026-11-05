@@ -11,7 +11,7 @@ export function HeartBurst({ trigger }: { trigger: number }) {
       id: trigger * 100 + i,
       left: Math.random() * 100,
       delay: Math.random() * 0.8,
-      e: HEARTS[i % HEARTS.length],
+      e: HEARTS[i % HEARTS.length] ?? "❤️",
       size: 16 + Math.random() * 20,
     }));
     setItems(next);
