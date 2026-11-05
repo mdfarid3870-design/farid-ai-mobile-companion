@@ -255,3 +255,11 @@
 @utility animate-rise {
   animation: rise-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Nadira surprise */
+:root { --love: oklch(0.72 0.17 10); --love-glow: oklch(0.82 0.11 50); }
+@utility bg-love { background-image: linear-gradient(135deg, var(--love), var(--love-glow)); }
+@utility text-love { background-image: linear-gradient(135deg, var(--love), var(--love-glow)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@utility love-card { box-shadow: 0 0 0 1px color-mix(in oklab, var(--love) 40%, transparent), 0 20px 60px -15px color-mix(in oklab, var(--love) 45%, transparent); }
+@keyframes heart-float { 0% { transform: translateY(0) scale(.6); opacity: 0 } 15% { opacity: 1 } 100% { transform: translateY(-105vh) rotate(25deg) scale(1.1); opacity: 0 } }
+@utility heart-float { animation: heart-float 3s ease-out forwards; opacity: 0; }

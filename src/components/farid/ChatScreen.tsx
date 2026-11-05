@@ -74,6 +74,7 @@ import { toast } from "sonner";
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
+import { HeartBurst, LoveNoteDialog } from "./NadiraSurprise";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +111,8 @@ export function ChatScreen() {
   const leaveOwner = useServerFn(leaveOwnerMode);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [heartBurst, setHeartBurst] = useState(0);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
@@ -240,6 +243,7 @@ export function ChatScreen() {
         toast.error(OFFLINE_MESSAGE);
         return;
       }
+      if (/❤|💖|💕|love|nadira|farid|valobashi|ভালোবাসি/i.test(content)) setHeartBurst(Date.now());
 
       let conversationId = activeId;
       let isFirstExchange = (messages.data?.length ?? 0) === 0;
@@ -397,6 +401,7 @@ export function ChatScreen() {
         </Button>
       </header>
 
+      <HeartBurst trigger={heartBurst} />
       {!online ? (
         <div className="flex items-center justify-center gap-2 bg-destructive/15 px-3 py-2 text-xs text-destructive">
           <WifiOff className="size-3.5" /> {OFFLINE_MESSAGE}
@@ -408,8 +413,16 @@ export function ChatScreen() {
           {list.length === 0 && !pending ? (
             <ConversationEmptyState>
               <BrandMark className="size-16 glow-ring animate-rise rounded-2xl" />
-              <h2 className="text-gradient-brand mt-4 font-display text-2xl font-bold animate-rise">How can I help you today?</h2>
-              <p className="text-sm text-muted-foreground">Ask anything — FARID AI is ready.</p>
+              <LoveNoteDialog open={noteOpen} onOpenChange={setNoteOpen} />
+              <h2 className="text-love mt-4 font-display text-2xl font-bold animate-rise">Welcome, Nadira ✨</h2>
+              <p className="text-sm text-muted-foreground">Crafted with love by Farid for Nadira ❤️</p>
+              <button
+                type="button"
+                onClick={() => setNoteOpen(true)}
+                className="tap-target love-card animate-rise mt-3 rounded-full bg-love px-5 py-2 text-sm font-medium text-primary-foreground transition active:scale-95"
+              >
+                💌 A note for you
+              </button>
               <div className="mt-4 grid w-full max-w-md gap-2">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
