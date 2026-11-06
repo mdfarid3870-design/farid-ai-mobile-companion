@@ -64,8 +64,9 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand }: Prop
     rec.interimResults = false;
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (!r?.isFinal) continue;
+        const r = e.results[i] as (ArrayLike<{ transcript: string }> & { isFinal: boolean }) | undefined;
+        if (!r) continue;
+        if (!r.isFinal) continue;
         const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
         if (SILENT.test(text)) {
