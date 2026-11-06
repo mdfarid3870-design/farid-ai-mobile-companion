@@ -65,8 +65,8 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand }: Prop
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
-        if (!r.isFinal) continue;
-        const text = r[0].transcript.trim();
+        if (!r?.isFinal) continue;
+        const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
         if (SILENT.test(text)) {
           window.speechSynthesis?.cancel();
