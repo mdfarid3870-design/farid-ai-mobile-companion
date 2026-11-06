@@ -75,6 +75,7 @@ import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
 import { HeartBurst, LoveNoteDialog, NadiraWelcome } from "./NadiraSurprise";
+import { VoiceMode } from "./VoiceMode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,6 +115,16 @@ export function ChatScreen() {
   const [heartBurst, setHeartBurst] = useState(0);
   const [noteOpen, setNoteOpen] = useState(false);
   const [nadiraWelcome, setNadiraWelcome] = useState(false);
+  const [nadiraVoice, setNadiraVoice] = useState(false);
+  useEffect(() => {
+    setNadiraVoice(localStorage.getItem("farid-nadira-voice") === "1");
+  }, []);
+  const unlockNadira = useCallback(() => {
+    localStorage.setItem("farid-nadira-voice", "1");
+    setNadiraVoice(true);
+    setHeartBurst(Date.now());
+    setNadiraWelcome(true);
+  }, []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
@@ -242,8 +253,7 @@ export function ChatScreen() {
       if ((!content && attached.length === 0) || pending || uploading || !user) return;
       if (content.replace(/\s+/g, " ").toLowerCase() === "nadira afrin") {
         setDraft("");
-        setHeartBurst(Date.now());
-        setNadiraWelcome(true);
+        unlockNadira();
         return;
       }
       if (!online) {
@@ -346,6 +356,11 @@ export function ChatScreen() {
 
   const list = messages.data ?? [];
   const activeTitle = "FaridAI";
+  const ownerOn = ownerStatus.data?.ownerVerified ?? false;
+  const lastAssistant = [...list].reverse().find((m) => m.role === "assistant" && m.content);
+  const voiceGreeting = nadiraVoice
+    ? "আসসালামু আলাইকুম নাদিরা, আমি ফরিদ এআই। ফরিদ আপনার জন্য আমাকে বানিয়েছে। বলুন, কী করতে পারি?"
+    : "আসসালামু আলাইকুম ফরিদ ভাই, আমি প্রস্তুত। বলুন, কী করতে হবে?";
 
   return (
     <div className="app-shell ambient-glow flex flex-col">
@@ -409,6 +424,13 @@ export function ChatScreen() {
       </header>
 
       <HeartBurst trigger={heartBurst} />
+      <VoiceMode
+        active={ownerOn || nadiraVoice}
+        greeting={voiceGreeting}
+        busy={pending}
+        lastReply={lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null}
+        onCommand={(text) => void send(text)}
+      />
       <NadiraWelcome
         open={nadiraWelcome}
         onClose={() => setNadiraWelcome(false)}
@@ -705,6 +727,17 @@ export function ChatScreen() {
         onSignOut={handleSignOut}
         onSwitchAccount={handleSwitchAccount}
         ownerVerified={ownerStatus.data?.ownerVerified ?? false}
+        nadiraOn={nadiraVoice}
+        onNadiraCode={(code) => {
+          if (code.replace(/\s+/g, " ").trim().toLowerCase() !== "nadira afrin") return false;
+          setDrawerOpen(false);
+          unlockNadira();
+          return true;
+        }}
+        onNadiraOff={() => {
+          localStorage.removeItem("farid-nadira-voice");
+          setNadiraVoice(false);
+        }}
         onLeaveOwner={async () => {
           const r = await leaveOwner();
           await ownerStatus.refetch();
