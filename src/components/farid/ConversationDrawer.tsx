@@ -55,6 +55,9 @@ type Props = {
   ownerVerified: boolean;
   onVerifyOwner: (code: string) => Promise<boolean>;
   onLeaveOwner: () => Promise<void>;
+  nadiraOn: boolean;
+  onNadiraCode: (code: string) => boolean;
+  onNadiraOff: () => void;
 };
 
 export function ConversationDrawer({
@@ -73,7 +76,13 @@ export function ConversationDrawer({
   ownerVerified,
   onVerifyOwner,
   onLeaveOwner,
+  nadiraOn,
+  onNadiraCode,
+  onNadiraOff,
 }: Props) {
+  const [nadiraOpen, setNadiraOpen] = useState(false);
+  const [nadiraCode, setNadiraCode] = useState("");
+  const [nadiraError, setNadiraError] = useState(false);
   const { theme, setTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [renaming, setRenaming] = useState<Conversation | null>(null);
@@ -276,6 +285,19 @@ export function ConversationDrawer({
 
             <Button
               variant="ghost"
+              className="tap-target h-10 w-full justify-start gap-2 px-2"
+              onClick={() => {
+                if (nadiraOn) return onNadiraOff();
+                setNadiraCode("");
+                setNadiraError(false);
+                setNadiraOpen(true);
+              }}
+            >
+              <span className="text-sm">{nadiraOn ? "💖 Nadira mode on — tap to turn off" : "💌 Nadira code"}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
               className="tap-target h-10 w-full justify-start gap-2 px-2 text-destructive hover:text-destructive"
               onClick={onSignOut}
             >
@@ -337,6 +359,34 @@ export function ConversationDrawer({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={nadiraOpen} onOpenChange={setNadiraOpen}>
+        <DialogContent className="max-w-[92vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>💌 Nadira code</DialogTitle>
+          </DialogHeader>
+          <form
+            className="grid gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (onNadiraCode(nadiraCode)) setNadiraOpen(false);
+              else setNadiraError(true);
+            }}
+          >
+            <Input
+              type="password"
+              autoFocus
+              value={nadiraCode}
+              onChange={(e) => setNadiraCode(e.target.value)}
+              placeholder="Secret code"
+            />
+            {nadiraError ? <p className="text-sm text-destructive">Code didn't match.</p> : null}
+            <Button type="submit" disabled={!nadiraCode.trim()}>
+              Unlock
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={ownerOpen} onOpenChange={setOwnerOpen}>
         <DialogContent className="max-w-[92vw] sm:max-w-md">
