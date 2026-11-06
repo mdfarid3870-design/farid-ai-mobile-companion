@@ -23,12 +23,44 @@ type Rec = {
 const SILENT = /(chup|চুপ|stop talking|be quiet|silent|thamo|থামো)/i;
 const WAKE = /(kotha bolo|কথা বলো|কথা বল|speak|talk to me|shuru|শুরু)/i;
 
+/** Pick the most human, JARVIS-like (deep, male, British) voice the phone offers — free, no credits. */
+function pickVoice(bangla: boolean): SpeechSynthesisVoice | undefined {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return undefined;
+  const score = (v: SpeechSynthesisVoice) => {
+    const n = v.name.toLowerCase();
+    let s = 0;
+    if (bangla ? v.lang.startsWith("bn") : v.lang.startsWith("en")) s += 100;
+    if (!bangla && v.lang === "en-GB") s += 40;
+    if (/natural|neural|online|premium|enhanced/.test(n)) s += 30;
+    if (/male|daniel|ryan|thomas|arthur|george|guy|uk english male|oliver/.test(n) && !/female/.test(n)) s += 25;
+    if (/google/.test(n)) s += 10;
+    return s;
+  };
+  return [...voices].sort((a, b) => score(b) - score(a))[0];
+}
+
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
 function speak(text: string, onDone?: () => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return onDone?.();
   window.speechSynthesis.cancel();
-  const clean = text.replace(/[*#`>_\[\]()]/g, "").slice(0, 600);
+  const clean = text.replace(/[*#`>_\[\]()]/g, "").replace(/\s+/g, " ").slice(0, 600);
   const u = new SpeechSynthesisUtterance(clean);
-  u.lang = /[\u0980-\u09FF]/.test(clean) ? "bn-BD" : "en-US";
+  const bangla = /[\u0980-\u09FF]/.test(clean);
+  u.lang = bangla ? "bn-BD" : "en-GB";
+  const voice = pickVoice(bangla);
+  if (voice) {
+    u.voice = voice;
+    u.lang = voice.lang;
+  }
+  // Calm, deep, confident delivery like JARVIS
+  u.pitch = 0.8;
+  u.rate = 0.95;
+  u.volume = 1;
   u.onend = () => onDone?.();
   u.onerror = () => onDone?.();
   window.speechSynthesis.speak(u);
