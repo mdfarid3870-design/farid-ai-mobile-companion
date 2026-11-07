@@ -117,13 +117,13 @@ export function NadiraWelcome({
 export function NadiraWelcomeCard({ onOpenNote }: { onOpenNote: () => void }) {
   return (
     <section aria-label="Welcome for Nadira Afrin" className="nadira-welcome relative mx-auto w-full max-w-md overflow-hidden rounded-lg border p-6 text-center motion-safe:animate-rise sm:p-8">
-      <div aria-hidden="true" className="flex items-center justify-center gap-4 text-love">
+      <div aria-hidden="true" className="flex items-center justify-center gap-4 text-love-ink">
         <Sparkles className="size-4" /><span className="text-4xl">🌹</span><Heart className="size-4" />
       </div>
       <p className="mt-5 text-xs font-semibold uppercase text-muted-foreground">With love, from Farid</p>
       <h2 className="text-love mt-2 font-display text-3xl font-bold leading-tight">Welcome,<br />Nadira Afrin</h2>
       <div aria-hidden="true" className="my-5 flex items-center justify-center gap-3">
-        <span className="h-px w-12 bg-border" /><Heart className="size-4 text-love" /><span className="h-px w-12 bg-border" />
+        <span className="h-px w-12 bg-border" /><Heart className="size-4 text-love-ink" /><span className="h-px w-12 bg-border" />
       </div>
       <p className="text-sm leading-7 text-card-foreground">তোমার হাসি, তোমার গল্প, তোমার ছোট ছোট স্বপ্ন—<br />সবকিছুর জন্য এখানে একটু ভালোবাসা রাখা আছে।</p>
       <p className="mt-3 text-sm leading-7 text-muted-foreground">কেমন আছো, নাদিরা? আমি এখানেই আছি, তোমার পাশে।</p>
