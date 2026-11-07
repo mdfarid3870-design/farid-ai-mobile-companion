@@ -1,5 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Heart, Mail, Sparkles } from "lucide-react";
 
 const HEARTS = ["❤️", "💖", "💕", "🌹", "✨"];
 
@@ -96,18 +98,39 @@ export function NadiraWelcome({
           তুমি এখানে সবসময় স্পেশাল। যা মনে আসে FARID AI কে বলো — সে তোমার যত্ন নেবে, ঠিক ফরিদের মতো 💖
         </p>
         <div className="mt-2 flex flex-col gap-2">
-          <button
+          <Button
             type="button"
             onClick={onOpenNote}
             className="tap-target rounded-full bg-love px-5 py-2 text-sm font-bold text-primary-foreground transition active:scale-95"
           >
             💌 Open your love note
-          </button>
-          <button type="button" onClick={onClose} className="tap-target text-sm font-semibold text-muted-foreground">
+          </Button>
+          <Button variant="ghost" type="button" onClick={onClose} className="tap-target text-sm font-semibold text-muted-foreground">
             Start chatting
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function NadiraWelcomeCard({ onOpenNote }: { onOpenNote: () => void }) {
+  return (
+    <section aria-label="Welcome for Nadira Afrin" className="nadira-welcome relative mx-auto w-full max-w-md overflow-hidden rounded-lg border p-6 text-center motion-safe:animate-rise sm:p-8">
+      <div aria-hidden="true" className="flex items-center justify-center gap-4 text-love-ink">
+        <Sparkles className="size-4" /><span className="text-4xl">🌹</span><Heart className="size-4" />
+      </div>
+      <p className="mt-5 text-xs font-semibold uppercase text-muted-foreground">With love, from Farid</p>
+      <h2 className="text-love mt-2 font-display text-3xl font-bold leading-tight">Welcome,<br />Nadira Afrin</h2>
+      <div aria-hidden="true" className="my-5 flex items-center justify-center gap-3">
+        <span className="h-px w-12 bg-border" /><Heart className="size-4 text-love-ink" /><span className="h-px w-12 bg-border" />
+      </div>
+      <p className="text-sm leading-7 text-card-foreground">তোমার হাসি, তোমার গল্প, তোমার ছোট ছোট স্বপ্ন—<br />সবকিছুর জন্য এখানে একটু ভালোবাসা রাখা আছে।</p>
+      <p className="mt-3 text-sm leading-7 text-muted-foreground">কেমন আছো, নাদিরা? আমি এখানেই আছি, তোমার পাশে।</p>
+      <Button onClick={onOpenNote} className="bg-love mt-6 h-auto min-h-11 max-w-full whitespace-normal px-5 py-3 text-primary-foreground">
+        <Mail className="size-4 shrink-0" /> A note for you
+      </Button>
+      <p className="mt-4 text-xs text-muted-foreground">শুধু তোমার জন্য · ফরিদ ❤️</p>
+    </section>
   );
 }
