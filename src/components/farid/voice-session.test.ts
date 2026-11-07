@@ -32,12 +32,17 @@ describe("Nadira microphone pause", () => {
     assert.equal(h.starts(), 2);
     assert.equal(h.session.acceptsInput, true);
   });
-  test("blocks microphone echoes during speech then resumes after completion", () => {
+  test("only pause commands are accepted during speech, and pause cuts speech off", () => {
     const h = setup(); h.session.listen(); h.session.say("Hello");
-    h.session.ended();
     assert.equal(h.session.acceptsInput, false);
+    assert.equal(h.session.acceptsPause, true);
+    h.session.pause();
+    assert.equal(h.session.speaking, false);
+    h.finish(); h.session.ended();
     assert.equal(h.starts(), 1);
-    h.finish(); assert.equal(h.starts(), 2);
+  });
+  test("recognizes silent/off commands in Bangla", () => {
+    for (const p of ["সাইলেন্ট", "silent", "off", "অফ", "চুপ"]) assert.equal(isPauseRequest(p), true);
   });
   test("late speech callbacks cannot restart a manually muted or disposed session", () => {
     const h = setup(); h.session.listen(); h.session.say("Hello");

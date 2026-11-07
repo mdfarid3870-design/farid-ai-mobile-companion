@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isPauseRequest, NADIRA_PAUSE_REPLY, VoiceSession } from "./voice-session";
+import { GENERAL_PAUSE_REPLY, isPauseRequest, NADIRA_PAUSE_REPLY, VoiceSession } from "./voice-session";
 
 type Props = {
   active: boolean;
@@ -10,6 +10,8 @@ type Props = {
   lastReply: { id: string; text: string } | null;
   onCommand: (text: string) => void;
   nadira?: boolean;
+  /** Increment to pause listening from a typed command. */
+  pauseSignal?: number;
 };
 
 type Rec = {
@@ -68,7 +70,7 @@ function speak(text: string, onDone?: () => void) {
 }
 
 /** Hands-free voice; complete pause requires the microphone button to resume. */
-export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira = false }: Props) {
+export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira = false, pauseSignal = 0 }: Props) {
   const [muted, setMuted] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [supported, setSupported] = useState(true);
@@ -111,11 +113,12 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
         if (!r.isFinal) continue;
         const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
-        if (!session.acceptsInput) continue;
+        if (!session.acceptsPause) continue;
         if (isPauseRequest(text)) {
           session.pause(nadira ? NADIRA_PAUSE_REPLY : "ঠিক আছে, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।");
           break;
         }
+        if (!session.acceptsInput) continue;
         if (busyRef.current) continue;
         onCommandRef.current(text);
       }
@@ -146,6 +149,11 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
     if (sessionRef.current?.muted) return;
     sessionRef.current?.say(lastReply.text);
   }, [active, busy, lastReply, muted]);
+
+  useEffect(() => {
+    if (pauseSignal) sessionRef.current?.pause(nadira ? NADIRA_PAUSE_REPLY : GENERAL_PAUSE_REPLY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pauseSignal]);
 
   if (!active) return null;
   return (
