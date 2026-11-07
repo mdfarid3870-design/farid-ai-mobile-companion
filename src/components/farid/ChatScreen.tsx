@@ -258,6 +258,13 @@ export function ChatScreen() {
         unlockNadira();
         return;
       }
+      if (attached.length === 0 && isPauseRequest(content)) {
+        // Answer locally — no AI call, no tokens.
+        setDraft("");
+        setPauseSignal((n) => n + 1);
+        toast(nadiraVoice ? NADIRA_PAUSE_REPLY : GENERAL_PAUSE_REPLY);
+        return;
+      }
       if (!online) {
         toast.error(OFFLINE_MESSAGE);
         return;
