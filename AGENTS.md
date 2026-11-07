@@ -10,3 +10,6 @@
 > the editor, so keep the branch in a working state.
 
 <!-- LOVABLE:END -->
+
+- Keep microphone lifecycle in the browser-safe VoiceSession controller so speech callbacks cannot restart paused listening or turn AI audio into user input.
+- Gate the personalized welcome and love note with Nadira mode; the standard chat shell stays shared so ordinary users retain the same layout.

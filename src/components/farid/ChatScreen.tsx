@@ -74,7 +74,7 @@ import { toast } from "sonner";
 import { BrandMark } from "./BrandMark";
 import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
-import { HeartBurst, LoveNoteDialog, NadiraWelcome } from "./NadiraSurprise";
+import { HeartBurst, LoveNoteDialog, NadiraWelcome, NadiraWelcomeCard } from "./NadiraSurprise";
 import { VoiceMode } from "./VoiceMode";
 import {
   DropdownMenu,
@@ -260,7 +260,7 @@ export function ChatScreen() {
         toast.error(OFFLINE_MESSAGE);
         return;
       }
-      if (/❤|💖|💕|love|nadira|farid|valobashi|ভালোবাসি/i.test(content)) setHeartBurst(Date.now());
+      if (nadiraVoice && /❤|💖|💕|love|nadira|farid|valobashi|ভালোবাসি/i.test(content)) setHeartBurst(Date.now());
 
       let conversationId = activeId;
       let isFirstExchange = (messages.data?.length ?? 0) === 0;
@@ -309,7 +309,7 @@ export function ChatScreen() {
         );
       }
     },
-    [activeId, files, messages.data?.length, online, pending, refresh, runReply, uploading, user],
+    [activeId, files, messages.data?.length, nadiraVoice, online, pending, refresh, runReply, unlockNadira, uploading, user],
   );
 
   const regenerate = useCallback(
@@ -426,13 +426,15 @@ export function ChatScreen() {
       <HeartBurst trigger={heartBurst} />
       <VoiceMode
         active={ownerOn || nadiraVoice}
+        nadira={nadiraVoice}
         greeting={voiceGreeting}
         busy={pending}
         lastReply={lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null}
         onCommand={(text) => void send(text)}
       />
+      <LoveNoteDialog open={nadiraVoice && noteOpen} onOpenChange={setNoteOpen} />
       <NadiraWelcome
-        open={nadiraWelcome}
+        open={nadiraVoice && nadiraWelcome}
         onClose={() => setNadiraWelcome(false)}
         onOpenNote={() => {
           setNadiraWelcome(false);
@@ -449,17 +451,9 @@ export function ChatScreen() {
         <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-3 pb-4">
           {list.length === 0 && !pending ? (
             <ConversationEmptyState>
+              {nadiraVoice ? <NadiraWelcomeCard onOpenNote={() => setNoteOpen(true)} /> : <>
               <BrandMark className="size-16 glow-ring animate-rise rounded-2xl" />
-              <LoveNoteDialog open={noteOpen} onOpenChange={setNoteOpen} />
-              <h2 className="text-love mt-4 font-display text-2xl font-bold animate-rise">Welcome, Nadira ✨</h2>
-              <p className="text-sm text-muted-foreground">Crafted with love by Farid for Nadira ❤️</p>
-              <button
-                type="button"
-                onClick={() => setNoteOpen(true)}
-                className="tap-target love-card animate-rise mt-3 rounded-full bg-love px-5 py-2 text-sm font-medium text-primary-foreground transition active:scale-95"
-              >
-                💌 A note for you
-              </button>
+              <h2 className="mt-4 font-display text-2xl font-bold animate-rise">FARID AI</h2>
               <div className="mt-4 grid w-full max-w-md gap-2">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
@@ -472,6 +466,7 @@ export function ChatScreen() {
                   </button>
                 ))}
               </div>
+              </>}
             </ConversationEmptyState>
           ) : null}
 
@@ -737,6 +732,8 @@ export function ChatScreen() {
         onNadiraOff={() => {
           localStorage.removeItem("farid-nadira-voice");
           setNadiraVoice(false);
+          setNadiraWelcome(false);
+          setNoteOpen(false);
         }}
         onLeaveOwner={async () => {
           const r = await leaveOwner();

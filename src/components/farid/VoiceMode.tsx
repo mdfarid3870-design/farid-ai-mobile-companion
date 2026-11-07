@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { isPauseRequest, NADIRA_PAUSE_REPLY, VoiceSession } from "./voice-session";
 
 type Props = {
   active: boolean;
@@ -7,6 +9,7 @@ type Props = {
   busy: boolean;
   lastReply: { id: string; text: string } | null;
   onCommand: (text: string) => void;
+  nadira?: boolean;
 };
 
 type Rec = {
@@ -18,10 +21,8 @@ type Rec = {
   onerror: ((e: { error: string }) => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 };
-
-const SILENT = /(chup|চুপ|stop talking|be quiet|silent|thamo|থামো)/i;
-const WAKE = /(kotha bolo|কথা বলো|কথা বল|speak|talk to me|shuru|শুরু)/i;
 
 /** Pick the most human, JARVIS-like (deep, male, British) voice the phone offers — free, no credits. */
 function pickVoice(bangla: boolean): SpeechSynthesisVoice | undefined {
@@ -66,22 +67,20 @@ function speak(text: string, onDone?: () => void) {
   window.speechSynthesis.speak(u);
 }
 
-/** Hands-free voice: greets, listens continuously, obeys "chup thako" / "kotha bolo". */
-export function VoiceMode({ active, greeting, busy, lastReply, onCommand }: Props) {
+/** Hands-free voice; complete pause requires the microphone button to resume. */
+export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira = false }: Props) {
   const [muted, setMuted] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [supported, setSupported] = useState(true);
-  const recRef = useRef<Rec | null>(null);
-  const state = useRef({ muted: false, speaking: false, active: false });
+  const sessionRef = useRef<VoiceSession | null>(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   const spokenId = useRef<string | null>(null);
-  const greeted = useRef(false);
-  state.current = { muted, speaking, active };
+  const onCommandRef = useRef(onCommand);
+  onCommandRef.current = onCommand;
 
   useEffect(() => {
     if (!active) {
-      recRef.current?.stop();
-      window.speechSynthesis?.cancel();
-      greeted.current = false;
       return;
     }
     const W = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
@@ -91,6 +90,17 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand }: Prop
       return;
     }
     const rec = new Ctor();
+    setSupported(true);
+    const session = new VoiceSession({
+      start: () => rec.start(),
+      abort: () => { try { rec.abort(); } catch { /* Not running. */ } },
+      cancel: () => window.speechSynthesis?.cancel(),
+      speak,
+      changed: () => { setMuted(session.muted); setSpeaking(session.speaking); },
+    });
+    sessionRef.current = session;
+    setMuted(false);
+    setSpeaking(false);
     rec.lang = "bn-BD";
     rec.continuous = true;
     rec.interimResults = false;
@@ -101,76 +111,60 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand }: Prop
         if (!r.isFinal) continue;
         const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
-        if (SILENT.test(text)) {
-          window.speechSynthesis?.cancel();
-          setSpeaking(false);
-          setMuted(true);
-          continue;
+        if (!session.acceptsInput) continue;
+        if (isPauseRequest(text)) {
+          session.pause(nadira ? NADIRA_PAUSE_REPLY : "ঠিক আছে, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।");
+          break;
         }
-        if (WAKE.test(text) && state.current.muted) {
-          setMuted(false);
-          speak("জি, বলুন। আমি শুনছি।");
-          continue;
-        }
-        if (state.current.muted || state.current.speaking) continue;
+        if (busyRef.current) continue;
         onCommandRef.current(text);
       }
     };
-    rec.onend = () => {
-      if (state.current.active) {
-        try {
-          rec.start();
-        } catch {
-          /* already started */
-        }
+    rec.onend = () => session.ended();
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        session.pause();
+        setSupported(false);
       }
     };
-    rec.onerror = (e) => {
-      if (e.error === "not-allowed") setSupported(false);
-    };
-    recRef.current = rec;
-    try {
-      rec.start();
-    } catch {
-      /* ignore */
-    }
-    if (!greeted.current) {
-      greeted.current = true;
-      spokenId.current = lastReply?.id ?? null;
-      setSpeaking(true);
-      speak(greeting, () => setSpeaking(false));
-    }
+    spokenId.current = lastReply?.id ?? null;
+    session.say(greeting);
     return () => {
       rec.onend = null;
-      rec.stop();
+      rec.onresult = null;
+      rec.onerror = null;
+      session.dispose();
+      sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
-
-  const onCommandRef = useRef(onCommand);
-  onCommandRef.current = onCommand;
+  }, [active, greeting, nadira]);
 
   useEffect(() => {
-    if (!active || busy || !lastReply || muted) return;
+    if (!active || busy || !lastReply) return;
     if (spokenId.current === lastReply.id) return;
     spokenId.current = lastReply.id;
-    setSpeaking(true);
-    speak(lastReply.text, () => setSpeaking(false));
+    if (sessionRef.current?.muted) return;
+    sessionRef.current?.say(lastReply.text);
   }, [active, busy, lastReply, muted]);
 
   if (!active) return null;
   return (
-    <button
+    <Button
       type="button"
       onClick={() => {
-        if (!muted) window.speechSynthesis?.cancel();
-        setMuted((m) => !m);
+        const session = sessionRef.current;
+        if (!session) return;
+        if (session.muted) session.resume();
+        else session.pause();
       }}
       className="fixed bottom-28 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-lg glow-ring"
-      aria-label={muted ? "Voice off" : "Voice on"}
+      disabled={!supported}
+      aria-label={muted ? "Resume voice listening" : "Pause voice listening"}
+      title={muted ? "Resume voice listening" : "Pause voice listening"}
+      aria-pressed={!muted && supported}
     >
       {muted || !supported ? <MicOff className="size-4" /> : <Mic className={`size-4 ${speaking ? "" : "animate-pulse"}`} />}
-      {!supported ? "Voice not supported" : muted ? "চুপ আছি — \"কথা বলো\"" : speaking ? "বলছি…" : "শুনছি…"}
-    </button>
+      {!supported ? "Voice not supported" : speaking ? "বলছি…" : muted ? "মাইক বন্ধ" : "শুনছি…"}
+    </Button>
   );
 }
