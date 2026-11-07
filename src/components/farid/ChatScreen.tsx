@@ -32,6 +32,7 @@ import {
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
 import { generateReply, generateTitle } from "@/lib/chat.functions";
+import { GENERAL_PAUSE_REPLY, isPauseRequest, NADIRA_PAUSE_REPLY } from "./voice-session";
 import { getOwnerStatus, leaveOwnerMode, verifyOwnerCode } from "@/lib/owner.functions";
 import {
   createConversation,
@@ -115,6 +116,7 @@ export function ChatScreen() {
   const [heartBurst, setHeartBurst] = useState(0);
   const [noteOpen, setNoteOpen] = useState(false);
   const [nadiraWelcome, setNadiraWelcome] = useState(false);
+  const [pauseSignal, setPauseSignal] = useState(0);
   const [nadiraVoice, setNadiraVoice] = useState(false);
   useEffect(() => {
     setNadiraVoice(localStorage.getItem("farid-nadira-voice") === "1");
@@ -427,6 +429,7 @@ export function ChatScreen() {
       <VoiceMode
         active={ownerOn || nadiraVoice}
         nadira={nadiraVoice}
+        pauseSignal={pauseSignal}
         greeting={voiceGreeting}
         busy={pending}
         lastReply={lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null}
