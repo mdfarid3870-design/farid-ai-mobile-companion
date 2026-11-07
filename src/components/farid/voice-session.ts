@@ -1,10 +1,17 @@
-export const NADIRA_PAUSE_REPLY = "ঠিক আছে নাদিরা, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।";
+export const NADIRA_PAUSE_REPLY = "ঠিক আছে নাদিরা, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।";
+export const GENERAL_PAUSE_REPLY = "ঠিক আছে, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।";
 
+/** Short pause commands only, so longer questions mentioning "stop" still reach the AI. */
 export function isPauseRequest(text: string) {
-  return /(?:\b(?:chup|quiet|silent|stop|thamo)\b|চুপ|থামো|বন্ধ করো|কথা বন্ধ|কথা অফ)/i.test(text);
+  const t = text.trim();
+  if (!t || t.split(/\s+/).length > 6) return false;
+  return /(?:\b(?:chup|quiet|silent|silence|stop|thamo|off)\b|চুপ|থামো|সাইলেন্ট|অফ|বন্ধ করো|কথা বন্ধ)/i.test(t);
 }
 
-/** Owns listening independently of React renders and ignores stale speech callbacks. */
+/**
+ * Owns listening independently of React renders and ignores stale speech callbacks.
+ * While speaking, the mic keeps running but only pause commands are accepted (barge-in).
+ */
 export class VoiceSession {
   muted = false;
   speaking = false;
@@ -21,9 +28,10 @@ export class VoiceSession {
   }) {}
 
   get acceptsInput() { return !this.disposed && !this.muted && !this.speaking; }
+  get acceptsPause() { return !this.disposed && !this.muted; }
 
   listen() {
-    if (!this.acceptsInput || this.running) return;
+    if (!this.acceptsPause || this.running) return;
     try { this.audio.start(); this.running = true; } catch { /* Already running. */ }
   }
 
@@ -36,7 +44,6 @@ export class VoiceSession {
     if (this.disposed) return;
     const generation = ++this.generation;
     this.speaking = true;
-    this.audio.abort();
     this.audio.cancel();
     this.audio.changed();
     this.audio.speak(text, () => {
@@ -49,11 +56,12 @@ export class VoiceSession {
 
   pause(acknowledgment?: string) {
     this.muted = true;
+    this.audio.abort();
+    this.running = false;
     if (acknowledgment) this.say(acknowledgment);
     else {
       ++this.generation;
       this.speaking = false;
-      this.audio.abort();
       this.audio.cancel();
       this.audio.changed();
     }
