@@ -113,11 +113,12 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
         if (!r.isFinal) continue;
         const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
-        if (!session.acceptsInput) continue;
+        if (!session.acceptsPause) continue;
         if (isPauseRequest(text)) {
           session.pause(nadira ? NADIRA_PAUSE_REPLY : "ঠিক আছে, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।");
           break;
         }
+        if (!session.acceptsInput) continue;
         if (busyRef.current) continue;
         onCommandRef.current(text);
       }
