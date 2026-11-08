@@ -13,3 +13,4 @@
 
 - Keep microphone lifecycle in the browser-safe VoiceSession controller so speech callbacks cannot restart paused listening or turn AI audio into user input.
 - Gate the personalized welcome and love note with Nadira mode; the standard chat shell stays shared so ordinary users retain the same layout.
+- Keep Nadira personalization in a browser-safe shared module and pass its boolean through reply validation; it changes conversational tone only, never authorization. Both unlock paths share one immediate local greeting, without an AI request.

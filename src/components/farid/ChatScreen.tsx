@@ -32,6 +32,7 @@ import {
   type ChatMessage,
 } from "@/lib/ai-chat.server.types";
 import { generateReply, generateTitle } from "@/lib/chat.functions";
+import { nadiraGreeting } from "@/lib/nadira-personalization";
 import { GENERAL_PAUSE_REPLY, isPauseRequest, NADIRA_PAUSE_REPLY } from "./voice-session";
 import { getOwnerStatus, leaveOwnerMode, verifyOwnerCode } from "@/lib/owner.functions";
 import {
@@ -118,15 +119,29 @@ export function ChatScreen() {
   const [nadiraWelcome, setNadiraWelcome] = useState(false);
   const [pauseSignal, setPauseSignal] = useState(0);
   const [nadiraVoice, setNadiraVoice] = useState(false);
-  useEffect(() => {
-    setNadiraVoice(localStorage.getItem("farid-nadira-voice") === "1");
+  const [welcomeMessage, setWelcomeMessage] = useState<{ id: string; text: string } | null>(null);
+  const [nadiraVoiceGreeting, setNadiraVoiceGreeting] = useState(() => nadiraGreeting(0));
+  const nextNadiraGreeting = useCallback(() => {
+    const stored = Number(localStorage.getItem("farid-nadira-greeting-count") ?? "0");
+    const count = Number.isSafeInteger(stored) && stored >= 0 ? stored : 0;
+    localStorage.setItem("farid-nadira-greeting-count", String(count + 1));
+    return nadiraGreeting(count);
   }, []);
+  useEffect(() => {
+    if (localStorage.getItem("farid-nadira-voice") === "1") {
+      setNadiraVoiceGreeting(nextNadiraGreeting());
+      setNadiraVoice(true);
+    }
+  }, [nextNadiraGreeting]);
   const unlockNadira = useCallback(() => {
+    const text = nextNadiraGreeting();
+    setNadiraVoiceGreeting(text);
+    setWelcomeMessage({ id: crypto.randomUUID(), text });
     localStorage.setItem("farid-nadira-voice", "1");
     setNadiraVoice(true);
     setHeartBurst(Date.now());
     setNadiraWelcome(true);
-  }, []);
+  }, [nextNadiraGreeting]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [startedNewChat, setStartedNewChat] = useState(false);
   const [pending, setPending] = useState(false);
@@ -208,7 +223,7 @@ export function ChatScreen() {
     async (conversationId: string, messageId: string, isFirstExchange: boolean) => {
       setPending(true);
       try {
-        const result = await reply({ data: { conversationId, messageId } });
+        const result = await reply({ data: { conversationId, messageId, nadiraMode: nadiraVoice } });
         if (!result.ok) toast.error(FRIENDLY_ERRORS[result.kind]);
         if (result.ok && isFirstExchange) {
           await titleFn({ data: { conversationId } }).catch(() => undefined);
@@ -220,7 +235,7 @@ export function ChatScreen() {
         refresh(conversationId);
       }
     },
-    [refresh, reply, titleFn],
+    [nadiraVoice, refresh, reply, titleFn],
   );
 
   const addFiles = useCallback((picked: FileList | null) => {
@@ -308,6 +323,7 @@ export function ChatScreen() {
         });
         setDraft("");
         setFiles([]);
+        setWelcomeMessage(null);
         refresh(conversationId);
         await runReply(conversationId, inserted.id, isFirstExchange);
       } catch (error) {
@@ -368,7 +384,7 @@ export function ChatScreen() {
   const ownerOn = ownerStatus.data?.ownerVerified ?? false;
   const lastAssistant = [...list].reverse().find((m) => m.role === "assistant" && m.content);
   const voiceGreeting = nadiraVoice
-    ? "আসসালামু আলাইকুম নাদিরা, আমি ফরিদ এআই। ফরিদ আপনার জন্য আমাকে বানিয়েছে। বলুন, কী করতে পারি?"
+    ? nadiraVoiceGreeting
     : "আসসালামু আলাইকুম ফরিদ ভাই, আমি প্রস্তুত। বলুন, কী করতে হবে?";
 
   return (
@@ -421,6 +437,7 @@ export function ChatScreen() {
           aria-label="New chat"
           onClick={() => {
             setStartedNewChat(true);
+            setWelcomeMessage(null);
             setActiveId(null);
             setDraft("");
             setFiles([]);
@@ -439,7 +456,7 @@ export function ChatScreen() {
         pauseSignal={pauseSignal}
         greeting={voiceGreeting}
         busy={pending}
-        lastReply={lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null}
+        lastReply={welcomeMessage ?? (lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null)}
         onCommand={(text) => void send(text)}
       />
       <LoveNoteDialog open={nadiraVoice && noteOpen} onOpenChange={setNoteOpen} />
@@ -557,6 +574,12 @@ export function ChatScreen() {
               </Message>
             ),
           )}
+
+          {nadiraVoice && welcomeMessage ? (
+            <Message from="assistant">
+              <MessageContent><MessageResponse>{welcomeMessage.text}</MessageResponse></MessageContent>
+            </Message>
+          ) : null}
 
           {pending ? (
             <Message from="assistant">
@@ -700,11 +723,13 @@ export function ChatScreen() {
         conversations={conversations.data ?? []}
         activeId={activeId}
         onSelect={(id) => {
+          setWelcomeMessage(null);
           setStartedNewChat(false);
           setActiveId(id);
           setDrawerOpen(false);
         }}
         onNewChat={() => {
+          setWelcomeMessage(null);
           setStartedNewChat(true);
           setActiveId(null);
           setDraft("");
@@ -742,6 +767,7 @@ export function ChatScreen() {
         onNadiraOff={() => {
           localStorage.removeItem("farid-nadira-voice");
           setNadiraVoice(false);
+          setWelcomeMessage(null);
           setNadiraWelcome(false);
           setNoteOpen(false);
         }}

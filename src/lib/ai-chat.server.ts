@@ -9,6 +9,7 @@ import {
 } from "./ai-chat.server.types";
 
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { nadiraPromptBlock } from "./nadira-personalization";
 import {
   createGeminiModel,
   getPrioritizedGeminiKeys,
@@ -125,6 +126,7 @@ export async function runAssistantReply(params: {
   userId: string;
   conversationId: string;
   untilMessageId?: string;
+  nadiraMode?: boolean;
 }): Promise<AssistantResult> {
   const { supabase, userId, conversationId, untilMessageId } = params;
   const geminiKeys = getPrioritizedGeminiKeys();
@@ -147,7 +149,7 @@ export async function runAssistantReply(params: {
       .select("user_id")
       .eq("user_id", userId)
       .maybeSingle();
-    const systemPrompt = `${SYSTEM_PROMPT} ${ownerPromptBlock(Boolean(ownerRow))}`;
+    const systemPrompt = `${SYSTEM_PROMPT} ${ownerPromptBlock(Boolean(ownerRow))} ${nadiraPromptBlock(params.nadiraMode === true, history.filter((row) => row.role === "assistant").length)}`;
     const modelMessages = await Promise.all(
       history.map(async (row) => ({
         role: row.role === "assistant" ? ("assistant" as const) : ("user" as const),
