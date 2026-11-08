@@ -1,12 +1,7 @@
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-
-const ReplyInput = z.object({
-  conversationId: z.string().uuid(),
-  /** Id of the last user message that the reply should answer. */
-  messageId: z.string().uuid(),
-});
+import { ReplyInput } from "./nadira-personalization";
 
 const TitleInput = z.object({
   conversationId: z.string().uuid(),
@@ -28,6 +23,7 @@ export const generateReply = createServerFn({ method: "POST" })
       userId: context.userId,
       conversationId: data.conversationId,
       untilMessageId: data.messageId,
+      nadiraMode: data.nadiraMode,
     });
   });
 
