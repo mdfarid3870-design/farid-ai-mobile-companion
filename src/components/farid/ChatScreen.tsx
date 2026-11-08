@@ -78,6 +78,30 @@ import { ConversationDrawer } from "./ConversationDrawer";
 import { MessageAttachments } from "./MessageAttachments";
 import { HeartBurst, LoveNoteDialog, NadiraWelcome, NadiraWelcomeCard } from "./NadiraSurprise";
 import { VoiceMode } from "./VoiceMode";
+
+const WRITE_REQUEST = /লিখে দাও|লিখে দেও|টেক্সট|text|likhe dao|lekho|লেখো|লিখো/i;
+/** In Nadira mode replies are spoken only, unless her preceding message asked for text. */
+function wantsText(list: { id: string; role: string; content: string }[], id: string) {
+  const i = list.findIndex((m) => m.id === id);
+  for (let j = i - 1; j >= 0; j--) if (list[j]?.role === "user") return WRITE_REQUEST.test(list[j]?.content ?? "");
+  return false;
+}
+
+/** Pins the shell to the visible area so the keyboard never pushes the screen up. */
+function useKeyboardSafeHeight() {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      document.documentElement.style.setProperty("--app-height", `${vv.height}px`);
+      window.scrollTo(0, 0);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+  }, []);
+}
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +142,7 @@ export function ChatScreen() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [nadiraWelcome, setNadiraWelcome] = useState(false);
   const [pauseSignal, setPauseSignal] = useState(0);
+  useKeyboardSafeHeight();
   const [nadiraVoice, setNadiraVoice] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState<{ id: string; text: string } | null>(null);
   const [nadiraVoiceGreeting, setNadiraVoiceGreeting] = useState(() => nadiraGreeting(0));
@@ -520,7 +545,11 @@ export function ChatScreen() {
                 <MessageContent>
                   <MessageAttachments attachments={message.attachments ?? []} />
                   {message.role === "assistant" ? (
-                    <MessageResponse>{message.content}</MessageResponse>
+                    nadiraVoice && !wantsText(list, message.id) ? (
+                      <p className="text-sm italic text-muted-foreground">🔊 মুখে বলেছি</p>
+                    ) : (
+                      <MessageResponse>{message.content}</MessageResponse>
+                    )
                   ) : (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   )}

@@ -186,8 +186,8 @@
 @utility app-shell {
   /* Uses the dynamic viewport so the Android keyboard shrinks the shell
      instead of pushing the composer off-screen. */
-  height: 100dvh;
-  max-height: 100dvh;
+  height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
 }
 
 @utility safe-top {
