@@ -105,15 +105,16 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
     setSpeaking(false);
     rec.lang = "bn-BD";
     rec.continuous = true;
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i] as (ArrayLike<{ transcript: string }> & { isFinal: boolean }) | undefined;
         if (!r) continue;
-        if (!r.isFinal) continue;
         const text = r[0]?.transcript.trim() ?? "";
         if (!text) continue;
         if (!session.acceptsPause) continue;
+        // Interim results let "stop" cut speech instantly, before the sentence is final.
+        if (!r.isFinal && !isPauseRequest(text)) continue;
         if (isPauseRequest(text)) {
           session.pause(nadira ? NADIRA_PAUSE_REPLY : "ঠিক আছে, একদম চুপ হয়ে গেলাম। আমি এখানেই আছি।");
           break;
@@ -123,7 +124,9 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
         onCommandRef.current(text);
       }
     };
-    rec.onend = () => session.ended();
+    // Small delay avoids rapid restart loops that make Android play the mic chime repeatedly.
+    let restartTimer: ReturnType<typeof setTimeout> | undefined;
+    rec.onend = () => { clearTimeout(restartTimer); restartTimer = setTimeout(() => session.ended(), 700); };
     rec.onerror = (e) => {
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
         session.pause();
@@ -133,6 +136,7 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
     spokenId.current = lastReply?.id ?? null;
     session.say(greeting);
     return () => {
+      clearTimeout(restartTimer);
       rec.onend = null;
       rec.onresult = null;
       rec.onerror = null;
