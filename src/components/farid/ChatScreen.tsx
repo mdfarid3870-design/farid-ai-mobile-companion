@@ -80,12 +80,6 @@ import { HeartBurst, LoveNoteDialog, NadiraWelcome, NadiraWelcomeCard } from "./
 import { VoiceMode } from "./VoiceMode";
 
 const WRITE_REQUEST = /লিখে দাও|লিখে দেও|টেক্সট|text|likhe dao|lekho|লেখো|লিখো/i;
-/** In Nadira mode replies are spoken only, unless her preceding message asked for text. */
-function wantsText(list: { id: string; role: string; content: string }[], id: string) {
-  const i = list.findIndex((m) => m.id === id);
-  for (let j = i - 1; j >= 0; j--) if (list[j]?.role === "user") return WRITE_REQUEST.test(list[j]?.content ?? "");
-  return false;
-}
 /** A reply is voice-only when the user message before it was spoken, not typed. */
 function isVoiceReply(list: { id: string; role: string; content: string }[], id: string, voiceIds: Set<string>) {
   const i = list.findIndex((m) => m.id === id);
