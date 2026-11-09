@@ -80,10 +80,13 @@ import { HeartBurst, LoveNoteDialog, NadiraWelcome, NadiraWelcomeCard } from "./
 import { VoiceMode } from "./VoiceMode";
 
 const WRITE_REQUEST = /লিখে দাও|লিখে দেও|টেক্সট|text|likhe dao|lekho|লেখো|লিখো/i;
-/** In Nadira mode replies are spoken only, unless her preceding message asked for text. */
-function wantsText(list: { id: string; role: string; content: string }[], id: string) {
+/** A reply is voice-only when the user message before it was spoken, not typed. */
+function isVoiceReply(list: { id: string; role: string; content: string }[], id: string, voiceIds: Set<string>) {
   const i = list.findIndex((m) => m.id === id);
-  for (let j = i - 1; j >= 0; j--) if (list[j]?.role === "user") return WRITE_REQUEST.test(list[j]?.content ?? "");
+  for (let j = i - 1; j >= 0; j--) {
+    const m = list[j];
+    if (m?.role === "user") return voiceIds.has(m.id) && !WRITE_REQUEST.test(m.content);
+  }
   return false;
 }
 
@@ -144,6 +147,7 @@ export function ChatScreen() {
   const [pauseSignal, setPauseSignal] = useState(0);
   useKeyboardSafeHeight();
   const [nadiraVoice, setNadiraVoice] = useState(false);
+  const [voiceIds, setVoiceIds] = useState<Set<string>>(() => new Set());
   const [welcomeMessage, setWelcomeMessage] = useState<{ id: string; text: string } | null>(null);
   const [nadiraVoiceGreeting, setNadiraVoiceGreeting] = useState(() => nadiraGreeting(0));
   const nextNadiraGreeting = useCallback(() => {
@@ -289,7 +293,7 @@ export function ChatScreen() {
   }, []);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, fromVoice = false) => {
       const content = text.trim();
       const attached = files;
       if ((!content && attached.length === 0) || pending || uploading || !user) return;
@@ -346,8 +350,9 @@ export function ChatScreen() {
           content: content || `Sent ${attachments.length} file(s)`,
           attachments,
         });
-        setDraft("");
-        setFiles([]);
+        if (fromVoice) setVoiceIds((prev) => new Set(prev).add(inserted.id));
+        else setDraft("");
+        if (!fromVoice) setFiles([]);
         setWelcomeMessage(null);
         refresh(conversationId);
         await runReply(conversationId, inserted.id, isFirstExchange);
@@ -407,7 +412,9 @@ export function ChatScreen() {
   const list = messages.data ?? [];
   const activeTitle = "FaridAI";
   const ownerOn = ownerStatus.data?.ownerVerified ?? false;
-  const lastAssistant = [...list].reverse().find((m) => m.role === "assistant" && m.content);
+  const lastAssistantAny = [...list].reverse().find((m) => m.role === "assistant" && m.content);
+  // Only replies to spoken messages are read aloud; typed messages get text replies.
+  const lastAssistant = lastAssistantAny && isVoiceReply(list, lastAssistantAny.id, voiceIds) ? lastAssistantAny : undefined;
   const voiceGreeting = nadiraVoice
     ? nadiraVoiceGreeting
     : "আসসালামু আলাইকুম ফরিদ ভাই, আমি প্রস্তুত। বলুন, কী করতে হবে?";
@@ -482,7 +489,7 @@ export function ChatScreen() {
         greeting={voiceGreeting}
         busy={pending}
         lastReply={welcomeMessage ?? (lastAssistant ? { id: lastAssistant.id, text: lastAssistant.content } : null)}
-        onCommand={(text) => void send(text)}
+        onCommand={(text) => void send(text, true)}
       />
       <LoveNoteDialog open={nadiraVoice && noteOpen} onOpenChange={setNoteOpen} />
       <NadiraWelcome
@@ -540,16 +547,12 @@ export function ChatScreen() {
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : message.role === "assistant" && isVoiceReply(list, message.id, voiceIds) ? null : (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
                   <MessageAttachments attachments={message.attachments ?? []} />
                   {message.role === "assistant" ? (
-                    nadiraVoice && !wantsText(list, message.id) ? (
-                      <p className="text-sm italic text-muted-foreground">🔊 মুখে বলেছি</p>
-                    ) : (
-                      <MessageResponse>{message.content}</MessageResponse>
-                    )
+                    <MessageResponse>{message.content}</MessageResponse>
                   ) : (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   )}
