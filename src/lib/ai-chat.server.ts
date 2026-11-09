@@ -169,7 +169,7 @@ export async function runAssistantReply(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const result = streamText({
-          model: gateway("google/gemini-3.8-flash"),
+          model: gateway("google/gemini-2.5-flash-lite"),
           system: systemPrompt,
           messages: modelMessages as ModelMessage[],
           maxRetries: 0,

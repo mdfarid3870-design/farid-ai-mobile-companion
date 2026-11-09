@@ -254,8 +254,13 @@ export function ChatScreen() {
       try {
         const result = await reply({ data: { conversationId, messageId, nadiraMode: nadiraVoice } });
         if (!result.ok) toast.error(FRIENDLY_ERRORS[result.kind]);
-        if (result.ok && isFirstExchange) {
-          await titleFn({ data: { conversationId } }).catch(() => undefined);
+        else {
+          // Show (and speak) the reply instantly instead of waiting for a refetch.
+          const msg: ChatMessage = { ...result.message, conversation_id: conversationId, attachments: [] };
+          queryClient.setQueryData<ChatMessage[]>(["messages", conversationId], (old) =>
+            old?.some((m) => m.id === msg.id) ? old : [...(old ?? []), msg],
+          );
+          if (isFirstExchange) void titleFn({ data: { conversationId } }).catch(() => undefined).finally(() => refresh(conversationId));
         }
       } catch {
         toast.error(FRIENDLY_ERRORS.server);
@@ -264,7 +269,7 @@ export function ChatScreen() {
         refresh(conversationId);
       }
     },
-    [nadiraVoice, refresh, reply, titleFn],
+    [nadiraVoice, queryClient, refresh, reply, titleFn],
   );
 
   const addFiles = useCallback((picked: FileList | null) => {

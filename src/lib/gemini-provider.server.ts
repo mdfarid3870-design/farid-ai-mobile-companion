@@ -7,7 +7,7 @@ import type { LanguageModel } from "ai";
  * 1. Multi-key pooling across GEMINI_API_KEY, GEMINI_API_KEYS, and GEMINI_KEY_*
  * 2. Automatic round-robin load balancing
  * 3. In-memory rate-limit / quota cooldowns (skips rate-limited keys automatically)
- * 4. Model cascading fallback (2.0-flash -> 2.0-flash-lite -> 1.5-flash -> 1.5-flash-8b)
+ * 4. Model cascading fallback (2.5-flash-lite -> 2.5-flash -> 2.0-flash)
  */
 
 interface KeyState {
@@ -109,7 +109,7 @@ export function reportGeminiKeySuccess(key: string) {
 }
 
 export function normalizeGeminiModel(rawModel?: string): string {
-  if (!rawModel) return "gemini-3.5-flash";
+  if (!rawModel) return "gemini-2.5-flash-lite";
   let model = rawModel.trim();
   if (model.startsWith("google/")) {
     model = model.slice("google/".length);
@@ -118,8 +118,8 @@ export function normalizeGeminiModel(rawModel?: string): string {
     model = model.slice("models/".length);
   }
   // Retired models fall back to a current one.
-  if (!model || /^gemini-(1\.|2\.)/.test(model)) {
-    return "gemini-3.5-flash";
+  if (!model || /^gemini-1\./.test(model)) {
+    return "gemini-2.5-flash-lite";
   }
   return model;
 }
@@ -130,7 +130,7 @@ export function getGeminiModelCandidates(requestedModel?: string): string[] {
   );
 
   // Ordered fallback models: modern, fast, and high-quota models first
-  const defaults = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
+  const defaults = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"];
 
   const list = [primary, ...defaults];
   return Array.from(new Set(list));
