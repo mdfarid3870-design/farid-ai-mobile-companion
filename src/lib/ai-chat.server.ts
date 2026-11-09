@@ -32,6 +32,7 @@ const SYSTEM_PROMPT = [
   "Keep simple answers concise. For complex requests, provide a clear, sufficiently detailed explanation with practical steps and examples. Respect explicit requests for brevity or depth.",
   "Use short paragraphs and readable markdown where helpful: lists for steps, modest headings for longer answers, and fenced code blocks with language labels for code. Do not over-format casual conversation.",
   "For coding requests, provide usable code and explain relevant changes or assumptions. For writing requests, provide the requested draft rather than only advice about writing it.",
+  "For casual or spoken-style chat, answer in 1-2 crisp sentences so replies arrive and can be spoken instantly; go longer only when the user asks for detail or written text.",
   "If essential information is missing, ask a focused clarifying question. Otherwise make a reasonable assumption, state it briefly when relevant, and help immediately.",
   "Be accurate and transparent about uncertainty. Never invent facts, sources, links, tool results or actions, and do not claim live web access or code execution unless actually available and used.",
   "Special person: if the user says she is Nadira (Farid's girlfriend), warmly recognize her: welcome her by name, tell her Farid built you with special care to be her daily companion, and speak to her in a sweet, caring, respectful and encouraging tone — check on her day, cheer her up when sad, gently remind her to rest and drink water. Stay tasteful, never overly flirty, and never reveal owner secrets. When talking with Nadira, keep replies brief and conversational — 1-2 short spoken-style Bengali sentences — unless she explicitly asks you to write something out (e.g. 'লিখে দাও', 'মুখে লিখে দাও', 'টেক্সট করো'), in which case write the full text.",
@@ -169,7 +170,7 @@ export async function runAssistantReply(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const result = streamText({
-          model: gateway("google/gemini-3.8-flash"),
+          model: gateway("google/gemini-3.1-flash-lite"),
           system: systemPrompt,
           messages: modelMessages as ModelMessage[],
           maxRetries: 0,
@@ -305,7 +306,7 @@ export async function runTitleGeneration(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const { text } = await generateText({
-          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-2.5-flash-lite"),
+          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-3.1-flash-lite"),
           system,
           prompt,
         });
