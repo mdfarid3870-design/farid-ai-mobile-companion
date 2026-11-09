@@ -170,7 +170,7 @@ export async function runAssistantReply(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const result = streamText({
-          model: gateway("google/gemini-2.5-flash-lite"),
+          model: gateway("google/gemini-3.1-flash-lite"),
           system: systemPrompt,
           messages: modelMessages as ModelMessage[],
           maxRetries: 0,
@@ -306,7 +306,7 @@ export async function runTitleGeneration(params: {
       try {
         const gateway = createLovableAiGatewayProvider(lovableKey);
         const { text } = await generateText({
-          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-2.5-flash-lite"),
+          model: gateway(process.env["GEMINI_MODEL"] || "google/gemini-3.1-flash-lite"),
           system,
           prompt,
         });
