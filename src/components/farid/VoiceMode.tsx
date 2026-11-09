@@ -101,7 +101,9 @@ export function VoiceMode({ active, greeting, busy, lastReply, onCommand, nadira
       changed: () => { setMuted(session.muted); setSpeaking(session.speaking); },
     });
     sessionRef.current = session;
-    setMuted(false);
+    // Mic stays off when the app opens; the button starts listening.
+    session.muted = true;
+    setMuted(true);
     setSpeaking(false);
     rec.lang = "bn-BD";
     rec.continuous = true;
